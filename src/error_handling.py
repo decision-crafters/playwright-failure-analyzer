@@ -16,6 +16,8 @@ from enum import Enum
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional
 
+import requests
+
 
 class ErrorSeverity(Enum):
     """Error severity levels."""
@@ -346,7 +348,7 @@ class GitHubAPIErrorHandler:
     def __init__(self, error_handler: ActionErrorHandler):
         self.error_handler = error_handler
 
-    def handle_api_error(self, response: "requests.Response") -> None:
+    def handle_api_error(self, response: requests.Response) -> None:
         """Handle GitHub API error responses."""
         status_code = response.status_code
 

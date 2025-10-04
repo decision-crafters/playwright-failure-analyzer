@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional
 
 from error_handling import (
     ActionError,
+    ActionErrorHandler,
     ConfigValidator,
     ErrorCodes,
     ErrorSeverity,
@@ -55,7 +56,7 @@ class FailureSummary:
 class PlaywrightReportParser:
     """Parser for Playwright JSON test reports."""
 
-    def __init__(self, report_path: str, error_handler: "ActionErrorHandler"):
+    def __init__(self, report_path: str, error_handler: ActionErrorHandler):
         self.report_path = report_path
         self.report_data = None
         self.error_handler = error_handler

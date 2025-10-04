@@ -5,7 +5,6 @@ Utility functions for the Playwright Failure Bundler action.
 
 import hashlib
 import os
-import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 

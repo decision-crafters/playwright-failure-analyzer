@@ -8,7 +8,6 @@ This module handles creating and managing GitHub issues for test failures.
 import argparse
 import json
 import os
-import sys
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -16,6 +15,7 @@ import requests
 
 from error_handling import (
     ActionError,
+    ActionErrorHandler,
     ConfigValidator,
     ErrorCodes,
     ErrorSeverity,
@@ -27,7 +27,6 @@ from utils import (
     format_duration,
     format_stack_trace,
     format_timestamp,
-    generate_issue_hash,
     get_branch_name,
     get_github_context,
     get_relative_path,
@@ -57,7 +56,7 @@ except ImportError:
 class GitHubAPIClient:
     """Client for interacting with the GitHub API."""
 
-    def __init__(self, token: str, repository: str, error_handler: "ActionErrorHandler"):
+    def __init__(self, token: str, repository: str, error_handler: ActionErrorHandler):
         self.token = token
         self.repository = repository
         self.base_url = "https://api.github.com"
@@ -318,7 +317,7 @@ class IssueManager:
                     f"Found existing issue #{existing_issue['number']}: {existing_issue['title']}"
                 )
                 # Update the existing issue with new information
-                updated_issue = self.github_client.update_issue(existing_issue["number"], body=body)
+                self.github_client.update_issue(existing_issue["number"], body=body)
                 return existing_issue["number"], existing_issue["html_url"], False
 
         # Create new issue

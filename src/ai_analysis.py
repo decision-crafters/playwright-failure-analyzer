@@ -10,11 +10,9 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import litellm
-
-from error_handling import ActionError, ErrorCodes, ErrorSeverity
 
 
 @dataclass
@@ -128,7 +126,7 @@ Be concise but thorough. Provide practical, actionable advice."""
 
         prompt_parts = [
             "Please analyze the following Playwright test failures:\n",
-            f"Test Run Context:",
+            "Test Run Context:",
             f"- Total Tests: {metadata.get('total_tests', 'unknown')}",
             f"- Failed Tests: {len(failures)}",
             f"- Playwright Version: {metadata.get('playwright_version', 'unknown')}",
