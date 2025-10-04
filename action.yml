@@ -1,0 +1,87 @@
+name: 'Intelligent Playwright Failure Bundler'
+description: 'Automatically halt Playwright test runs after configurable failures and bundle error details into actionable GitHub issues'
+author: 'Tosin Akinosho'
+branding:
+  icon: 'alert-triangle'
+  color: 'red'
+
+inputs:
+  github-token:
+    description: 'GitHub token with issues:write permissions'
+    required: true
+  report-path:
+    description: 'Path to the Playwright JSON report file'
+    required: false
+    default: 'test-results/results.json'
+  max-failures:
+    description: 'Maximum number of failures before halting and creating an issue'
+    required: false
+    default: '3'
+  issue-title:
+    description: 'Title for the created GitHub issue'
+    required: false
+    default: 'Playwright Test Failures Detected'
+  issue-labels:
+    description: 'Comma-separated list of labels to apply to the issue'
+    required: false
+    default: 'bug,playwright,test-failure'
+  assignees:
+    description: 'Comma-separated list of GitHub usernames to assign to the issue'
+    required: false
+    default: ''
+  deduplicate:
+    description: 'Whether to check for existing open issues with the same title'
+    required: false
+    default: 'true'
+  ai-analysis:
+    description: 'Enable AI-powered failure analysis using LiteLLM'
+    required: false
+    default: 'true'
+
+outputs:
+  issue-number:
+    description: 'The number of the created GitHub issue'
+    value: ${{ steps.create-issue.outputs.issue-number }}
+  issue-url:
+    description: 'The URL of the created GitHub issue'
+    value: ${{ steps.create-issue.outputs.issue-url }}
+  failures-count:
+    description: 'Number of failures detected in the report'
+    value: ${{ steps.parse-report.outputs.failures-count }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      shell: bash
+      run: |
+        pip install -r ${{ github.action_path }}/requirements.txt
+    
+    - name: Parse Playwright report
+      id: parse-report
+      shell: bash
+      run: |
+        python ${{ github.action_path }}/src/parse_report.py \
+          --report-path "${{ inputs.report-path }}" \
+          --max-failures "${{ inputs.max-failures }}" \
+          --output-file "/tmp/failure_summary.json"
+    
+    - name: Create GitHub issue
+      id: create-issue
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+      run: |
+        python ${{ github.action_path }}/src/create_issue.py \
+          --summary-file "/tmp/failure_summary.json" \
+          --issue-title "${{ inputs.issue-title }}" \
+          --issue-labels "${{ inputs.issue-labels }}" \
+          --assignees "${{ inputs.assignees }}" \
+          --deduplicate "${{ inputs.deduplicate }}" \
+          --ai-analysis "${{ inputs.ai-analysis }}"
