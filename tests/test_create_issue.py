@@ -3,12 +3,10 @@
 Unit tests for GitHub issue creation functionality.
 """
 
-import json
 import os
 import sys
-import tempfile
 import unittest
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 # Add src directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -26,9 +24,6 @@ except ImportError:
             self.message = message
             self.severity = severity
             super().__init__(message)
-
-
-import requests
 
 
 class TestGitHubAPIClient(unittest.TestCase):

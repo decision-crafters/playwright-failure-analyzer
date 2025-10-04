@@ -38,7 +38,7 @@ class Colors:
                 kernel32 = ctypes.windll.kernel32
                 kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
                 return True
-            except:
+            except Exception:
                 return False
         return True
 
@@ -90,7 +90,7 @@ def run_command(cmd, check=True, capture_output=False):
         else:
             subprocess.run(cmd, shell=True, check=check)
             return True
-    except subprocess.CalledProcessError as e:
+    except subprocess.CalledProcessError:
         if check:
             raise
         return False
@@ -145,7 +145,7 @@ def install_precommit():
         try:
             version = run_command("pre-commit --version", capture_output=True)
             print_info(f"pre-commit {version} already installed")
-        except:
+        except Exception:
             print_info("pre-commit already installed")
     else:
         print_info("Installing pre-commit via pip...")
@@ -225,9 +225,9 @@ def check_additional_deps():
     # Check gitleaks
     if shutil.which("gitleaks"):
         try:
-            version = run_command("gitleaks version", capture_output=True)
-            print_success(f"gitleaks detected")
-        except:
+            run_command("gitleaks version", capture_output=True)
+            print_success("gitleaks detected")
+        except Exception:
             print_success("gitleaks detected")
     else:
         print_warning("gitleaks not installed (highly recommended for security)")

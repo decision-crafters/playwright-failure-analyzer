@@ -8,13 +8,12 @@ import os
 import sys
 import tempfile
 import unittest
-from unittest.mock import MagicMock, patch
 
 # Add src directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from error_handling import ErrorCodes, setup_error_handling
-from parse_report import FailureSummary, PlaywrightReportParser, TestFailure
+from parse_report import PlaywrightReportParser
 
 try:
     from error_handling import ActionError

@@ -5,7 +5,6 @@ Test runner for the Playwright Failure Bundler action.
 This script runs all tests and generates a coverage report.
 """
 
-import os
 import subprocess
 import sys
 import unittest

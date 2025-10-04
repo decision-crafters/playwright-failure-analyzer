@@ -5,7 +5,6 @@ Unit tests for utility functions.
 
 import os
 import sys
-import tempfile
 import unittest
 from unittest.mock import mock_open, patch
 
