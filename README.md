@@ -32,22 +32,22 @@ jobs:
       issues: write  # Required for creating issues
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Install Playwright
         run: npx playwright install --with-deps
-        
+
       - name: Run Playwright tests
         run: npx playwright test --reporter=json
         continue-on-error: true  # Important: don't fail the job on test failures
-        
+
       - name: Bundle test failures
         if: always()  # Run even if tests failed
         uses: your-org/playwright-failure-bundler@v1
@@ -97,7 +97,7 @@ When failures are detected, the action creates a well-formatted issue like this:
 ### 1. Login Flow Test
 - **File**: `tests/auth/login.spec.ts`
 - **Error**: `expect(page.locator('[data-testid="welcome"]')).toBeVisible()`
-- **Stack Trace**: 
+- **Stack Trace**:
   ```
   Error: Timed out 5000ms waiting for expect(locator).toBeVisible()
   at /home/runner/work/app/tests/auth/login.spec.ts:23:5

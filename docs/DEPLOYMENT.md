@@ -136,14 +136,14 @@ If you prefer to host the action privately or need customizations:
 1. **Create Dockerfile**:
    ```dockerfile
    FROM python:3.9-slim
-   
+
    WORKDIR /app
    COPY requirements.txt .
    RUN pip install -r requirements.txt
-   
+
    COPY src/ ./src/
    COPY action.yml .
-   
+
    ENTRYPOINT ["python", "/app/src/main.py"]
    ```
 
@@ -218,7 +218,7 @@ Recommended branching strategy:
    ```bash
    # Create a test report
    npx playwright test --reporter=json
-   
+
    # Test the parser
    python src/parse_report.py \
      --report-path test-results/results.json \
@@ -230,7 +230,7 @@ Recommended branching strategy:
    ```bash
    export GITHUB_TOKEN="your-test-token"
    export GITHUB_REPOSITORY="your-org/test-repo"
-   
+
    python src/create_issue.py \
      --summary-file /tmp/summary.json \
      --issue-title "Test Issue" \
@@ -242,9 +242,9 @@ Recommended branching strategy:
 1. **Create test workflow** in a separate repository:
    ```yaml
    name: Test Playwright Failure Bundler
-   
+
    on: workflow_dispatch
-   
+
    jobs:
      test:
        runs-on: ubuntu-latest

@@ -84,37 +84,52 @@ check_python() {
     fi
 }
 
-# Check if pip is available
-check_pip() {
-    print_step "\nChecking pip installation..."
+# Setup virtual environment for development tools
+setup_venv() {
+    print_step "\nSetting up Python virtual environment..."
 
-    if ! command -v pip3 &> /dev/null && ! command -v pip &> /dev/null; then
-        print_error "pip is not installed!"
-        echo "Please install pip for Python 3."
-        exit 1
-    fi
+    VENV_DIR=".venv"
 
-    if command -v pip3 &> /dev/null; then
-        PIP_CMD="pip3"
+    if [ -d "$VENV_DIR" ]; then
+        print_info "Virtual environment already exists"
     else
-        PIP_CMD="pip"
+        print_info "Creating virtual environment..."
+
+        # Prefer Python 3.11 if available
+        if command -v python3.11 &> /dev/null; then
+            PYTHON_CMD="python3.11"
+            print_info "Using Python 3.11 for venv"
+        elif command -v python3 &> /dev/null; then
+            PYTHON_CMD="python3"
+        else
+            print_error "Python 3 not found!"
+            exit 1
+        fi
+
+        $PYTHON_CMD -m venv $VENV_DIR
+        print_success "Virtual environment created"
     fi
 
-    print_success "pip detected"
+    # Activate venv and set pip command
+    source $VENV_DIR/bin/activate
+    PIP_CMD="$VENV_DIR/bin/pip"
+
+    # Upgrade pip in venv
+    print_info "Upgrading pip in venv..."
+    $PIP_CMD install --upgrade pip > /dev/null 2>&1
+
+    print_success "Virtual environment ready"
 }
 
 # Install pre-commit
 install_precommit() {
-    print_step "\nInstalling pre-commit..."
+    print_step "\nInstalling pre-commit in venv..."
 
-    if command -v pre-commit &> /dev/null; then
-        PRECOMMIT_VERSION=$(pre-commit --version | cut -d' ' -f2)
-        print_info "pre-commit ${PRECOMMIT_VERSION} already installed"
-    else
-        print_info "Installing pre-commit via pip..."
-        $PIP_CMD install --user pre-commit
-        print_success "pre-commit installed"
-    fi
+    print_info "Installing pre-commit..."
+    $PIP_CMD install pre-commit > /dev/null 2>&1
+
+    PRECOMMIT_VERSION=$($VENV_DIR/bin/pre-commit --version | cut -d' ' -f2)
+    print_success "pre-commit ${PRECOMMIT_VERSION} installed"
 }
 
 # Install Python development tools
@@ -130,14 +145,8 @@ install_python_tools() {
         "detect-secrets"
     )
 
-    for tool in "${TOOLS[@]}"; do
-        if command -v $tool &> /dev/null; then
-            print_info "$tool already installed"
-        else
-            print_info "Installing $tool..."
-            $PIP_CMD install --user $tool
-        fi
-    done
+    print_info "Installing tools into venv..."
+    $PIP_CMD install "${TOOLS[@]}" > /dev/null 2>&1
 
     print_success "All Python tools installed"
 }
@@ -146,12 +155,12 @@ install_python_tools() {
 install_git_hooks() {
     print_step "\nInstalling git hooks..."
 
-    # Install pre-commit hook
-    pre-commit install
+    # Install pre-commit hook using venv's pre-commit
+    $VENV_DIR/bin/pre-commit install
     print_success "Pre-commit hook installed"
 
     # Install commit-msg hook for conventional commits
-    pre-commit install --hook-type commit-msg
+    $VENV_DIR/bin/pre-commit install --hook-type commit-msg
     print_success "Commit-msg hook installed"
 }
 
@@ -163,11 +172,11 @@ initialize_secrets_baseline() {
         print_info "Secrets baseline already exists"
 
         # Update the baseline with current files
-        detect-secrets scan --baseline .secrets.baseline --exclude-files '.*\.lock$' > /dev/null 2>&1 || true
+        $VENV_DIR/bin/detect-secrets scan --baseline .secrets.baseline --exclude-files '.*\.lock$' > /dev/null 2>&1 || true
         print_success "Secrets baseline updated"
     else
         print_info "Creating new secrets baseline..."
-        detect-secrets scan --baseline .secrets.baseline --exclude-files '.*\.lock$' > /dev/null 2>&1 || true
+        $VENV_DIR/bin/detect-secrets scan --baseline .secrets.baseline --exclude-files '.*\.lock$' > /dev/null 2>&1 || true
         print_success "Secrets baseline created"
     fi
 }
@@ -204,8 +213,8 @@ run_initial_checks() {
 
     echo -e "\n${YELLOW}This may take a few minutes on first run...${NC}\n"
 
-    # Run pre-commit on all files
-    if pre-commit run --all-files; then
+    # Run pre-commit on all files using venv's pre-commit
+    if $VENV_DIR/bin/pre-commit run --all-files; then
         echo ""
         print_success "All pre-commit checks passed! 🎉"
     else
@@ -213,12 +222,12 @@ run_initial_checks() {
         print_warning "Some pre-commit checks failed"
         echo ""
         print_info "This is normal for the first run. Common issues:"
-        echo "  • Code formatting (auto-fixable with: black src/ tests/)"
-        echo "  • Import sorting (auto-fixable with: isort src/ tests/)"
+        echo "  • Code formatting (auto-fixable with: .venv/bin/black src/ tests/)"
+        echo "  • Import sorting (auto-fixable with: .venv/bin/isort src/ tests/)"
         echo "  • Trailing whitespace (auto-fixed automatically)"
         echo ""
         print_info "To fix auto-fixable issues, run:"
-        echo "  ${CYAN}pre-commit run --all-files${NC}"
+        echo "  ${CYAN}.venv/bin/pre-commit run --all-files${NC}"
         echo ""
         print_info "Then stage and commit the changes:"
         echo "  ${CYAN}git add .${NC}"
@@ -253,9 +262,9 @@ print_summary() {
     echo "  4. Pre-commit hooks run automatically!"
 
     echo -e "\n${CYAN}Useful Commands:${NC}"
-    echo "  • Run hooks manually:      ${YELLOW}pre-commit run --all-files${NC}"
-    echo "  • Auto-fix formatting:     ${YELLOW}black src/ tests/ && isort src/ tests/${NC}"
-    echo "  • Update hooks:            ${YELLOW}pre-commit autoupdate${NC}"
+    echo "  • Run hooks manually:      ${YELLOW}.venv/bin/pre-commit run --all-files${NC}"
+    echo "  • Auto-fix formatting:     ${YELLOW}.venv/bin/black src/ tests/ && .venv/bin/isort src/ tests/${NC}"
+    echo "  • Update hooks:            ${YELLOW}.venv/bin/pre-commit autoupdate${NC}"
     echo "  • See quick reference:     ${YELLOW}cat .pre-commit-quick-reference.md${NC}"
 
     echo -e "\n${CYAN}Documentation:${NC}"
@@ -272,7 +281,7 @@ main() {
 
     check_git_repo
     check_python
-    check_pip
+    setup_venv
     install_precommit
     install_python_tools
     install_git_hooks

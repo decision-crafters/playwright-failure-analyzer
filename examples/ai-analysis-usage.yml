@@ -12,34 +12,34 @@ env:
 jobs:
   test-with-ai-analysis:
     runs-on: ubuntu-latest
-    
+
     permissions:
       issues: write
       contents: read
-      
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
-        
+
       - name: Run Playwright tests
         run: |
           npx playwright test \
             --reporter=json \
             --output-dir=test-results
         continue-on-error: true
-        
+
       - name: Bundle failures with AI analysis
         if: always()
         uses: your-org/playwright-failure-bundler@v1
@@ -55,31 +55,31 @@ jobs:
         env:
           # Required for AI analysis - use repository secrets
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          
+
   test-with-custom-ai-model:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
+
     permissions:
       issues: write
       contents: read
-      
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
-        
+
       - name: Run comprehensive test suite
         run: |
           npx playwright test \
@@ -87,7 +87,7 @@ jobs:
             --reporter=json \
             --output-dir=comprehensive-results
         continue-on-error: true
-        
+
       - name: Advanced AI analysis with custom model
         if: always()
         uses: your-org/playwright-failure-bundler@v1
@@ -104,31 +104,31 @@ jobs:
           # Use a more powerful model for production issues
           AI_MODEL: 'gpt-4.1-mini'  # or 'gemini-2.5-flash'
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          
+
   test-with-anthropic:
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule'  # Only for scheduled runs
-    
+
     permissions:
       issues: write
       contents: read
-      
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
-        
+
       - name: Run nightly test suite
         run: |
           npx playwright test \
@@ -136,7 +136,7 @@ jobs:
             --reporter=json \
             --output-dir=nightly-results
         continue-on-error: true
-        
+
       - name: AI analysis with Anthropic Claude
         if: always()
         uses: your-org/playwright-failure-bundler@v1
@@ -160,27 +160,27 @@ jobs:
       fail-fast: false
       matrix:
         browser: [chromium, firefox, webkit]
-        
+
     permissions:
       issues: write
       contents: read
-      
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Install Playwright browser
         run: npx playwright install --with-deps ${{ matrix.browser }}
-        
+
       - name: Run browser-specific tests
         run: |
           npx playwright test \
@@ -188,7 +188,7 @@ jobs:
             --reporter=json \
             --output-dir=test-results-${{ matrix.browser }}
         continue-on-error: true
-        
+
       - name: Browser-specific AI analysis
         if: always()
         uses: your-org/playwright-failure-bundler@v1

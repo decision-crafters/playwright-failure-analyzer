@@ -15,39 +15,39 @@ jobs:
   test:
     name: Test Suite
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-          
+
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
           pip install pytest pytest-cov flake8 mypy black isort
-          
+
       - name: Run linting
         run: |
           flake8 src/ --max-line-length=100 --ignore=E501,W503
           black --check src/
           isort --check-only src/
-          
+
       - name: Run type checking
         run: mypy src/ --ignore-missing-imports
         continue-on-error: true
-        
+
       - name: Run tests
         run: python tests/run_tests.py
-        
+
       - name: Generate coverage report
         run: |
           pytest tests/ --cov=src --cov-report=xml --cov-report=html
-          
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
@@ -59,20 +59,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     if: github.event_name == 'pull_request'
-    
+
     permissions:
       issues: write
       contents: read
-      
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js for Playwright
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          
+
       - name: Create test Playwright project
         run: |
           mkdir test-project
@@ -80,35 +80,35 @@ jobs:
           npm init -y
           npm install @playwright/test
           npx playwright install chromium
-          
+
       - name: Create failing test
         run: |
           cd test-project
           cat > test.spec.js << 'EOF'
           const { test, expect } = require('@playwright/test');
-          
+
           test('failing test 1', async ({ page }) => {
             await page.goto('https://example.com');
             await expect(page.locator('nonexistent')).toBeVisible();
           });
-          
+
           test('failing test 2', async ({ page }) => {
             await page.goto('https://example.com');
             throw new Error('Intentional test failure');
           });
-          
+
           test('passing test', async ({ page }) => {
             await page.goto('https://example.com');
             await expect(page.locator('h1')).toBeVisible();
           });
           EOF
-          
+
       - name: Run Playwright tests
         run: |
           cd test-project
           npx playwright test --reporter=json --output-dir=test-results
         continue-on-error: true
-        
+
       - name: Test the action
         uses: ./
         with:
@@ -122,17 +122,17 @@ jobs:
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Run Bandit security scan
         run: |
           pip install bandit
           bandit -r src/ -f json -o bandit-report.json
         continue-on-error: true
-        
+
       - name: Upload security scan results
         uses: actions/upload-artifact@v3
         with:
@@ -142,16 +142,16 @@ jobs:
   validate-action:
     name: Validate Action
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Validate action.yml
         run: |
           # Check that action.yml is valid YAML
           python -c "import yaml; yaml.safe_load(open('action.yml'))"
-          
+
       - name: Check required files
         run: |
           test -f action.yml
@@ -161,7 +161,7 @@ jobs:
           test -d src/
           test -d tests/
           test -d examples/
-          
+
       - name: Validate Python syntax
         run: |
           python -m py_compile src/*.py
@@ -172,37 +172,37 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, security-scan, validate-action]
     if: github.event_name == 'release'
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          
+
       - name: Create release package
         run: |
           # Create a clean package for release
           mkdir -p release-package
           cp -r src/ release-package/
           cp action.yml requirements.txt LICENSE README.md release-package/
-          
+
       - name: Upload release artifacts
         uses: actions/upload-artifact@v3
         with:
           name: release-package-${{ github.event.release.tag_name }}
           path: release-package/
-          
+
       - name: Update marketplace tags
         run: |
           # Update major version tag (e.g., v1) for marketplace
           git config user.name github-actions
           git config user.email github-actions@github.com
-          
+
           TAG_NAME=${{ github.event.release.tag_name }}
           MAJOR_VERSION=$(echo $TAG_NAME | cut -d. -f1)
-          
+
           git tag -f $MAJOR_VERSION
           git push origin $MAJOR_VERSION --force

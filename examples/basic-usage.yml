@@ -11,27 +11,27 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       issues: write  # Required for creating GitHub issues
-      
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
-        
+
       - name: Run Playwright tests
         run: npx playwright test --reporter=json
         continue-on-error: true  # Important: don't fail the job on test failures
-        
+
       - name: Bundle test failures
         if: always()  # Run even if tests failed
         uses: your-org/playwright-failure-bundler@v1

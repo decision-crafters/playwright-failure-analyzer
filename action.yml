@@ -56,12 +56,12 @@ runs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-    
+
     - name: Install dependencies
       shell: bash
       run: |
         pip install -r ${{ github.action_path }}/requirements.txt
-    
+
     - name: Parse Playwright report
       id: parse-report
       shell: bash
@@ -70,7 +70,7 @@ runs:
           --report-path "${{ inputs.report-path }}" \
           --max-failures "${{ inputs.max-failures }}" \
           --output-file "/tmp/failure_summary.json"
-    
+
     - name: Create GitHub issue
       id: create-issue
       shell: bash

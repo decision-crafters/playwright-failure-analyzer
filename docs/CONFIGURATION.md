@@ -226,12 +226,12 @@ Use with matrix strategies for comprehensive testing:
 strategy:
   matrix:
     browser: [chromium, firefox, webkit]
-    
+
 steps:
   - name: Run tests
     run: npx playwright test --project=${{ matrix.browser }}
     continue-on-error: true
-    
+
   - name: Bundle failures
     uses: your-org/playwright-failure-bundler@v1
     with:

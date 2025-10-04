@@ -11,28 +11,30 @@ Usage: python scripts/setup-precommit.py
 """
 
 import os
-import sys
-import subprocess
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 
 class Colors:
     """ANSI color codes for terminal output"""
-    RED = '\033[0;31m'
-    GREEN = '\033[0;32m'
-    YELLOW = '\033[1;33m'
-    BLUE = '\033[0;34m'
-    CYAN = '\033[0;36m'
-    NC = '\033[0m'  # No Color
+
+    RED = "\033[0;31m"
+    GREEN = "\033[0;32m"
+    YELLOW = "\033[1;33m"
+    BLUE = "\033[0;34m"
+    CYAN = "\033[0;36m"
+    NC = "\033[0m"  # No Color
 
     @staticmethod
     def supports_color():
         """Check if terminal supports colors"""
-        if os.name == 'nt':
+        if os.name == "nt":
             # Enable ANSI colors on Windows 10+
             try:
                 import ctypes
+
                 kernel32 = ctypes.windll.kernel32
                 kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
                 return True
@@ -43,7 +45,7 @@ class Colors:
 
 # Disable colors on Windows if not supported
 if not Colors.supports_color():
-    Colors.RED = Colors.GREEN = Colors.YELLOW = Colors.BLUE = Colors.CYAN = Colors.NC = ''
+    Colors.RED = Colors.GREEN = Colors.YELLOW = Colors.BLUE = Colors.CYAN = Colors.NC = ""
 
 
 def print_header():
@@ -83,8 +85,7 @@ def run_command(cmd, check=True, capture_output=False):
     """Run a shell command"""
     try:
         if capture_output:
-            result = subprocess.run(cmd, shell=True, check=check,
-                                  capture_output=True, text=True)
+            result = subprocess.run(cmd, shell=True, check=check, capture_output=True, text=True)
             return result.stdout.strip()
         else:
             subprocess.run(cmd, shell=True, check=check)
@@ -158,14 +159,7 @@ def install_python_tools():
     """Install Python development tools"""
     print_step("\nInstalling Python development tools...")
 
-    tools = [
-        "black",
-        "isort",
-        "flake8",
-        "mypy",
-        "bandit",
-        "detect-secrets"
-    ]
+    tools = ["black", "isort", "flake8", "mypy", "bandit", "detect-secrets"]
 
     for tool in tools:
         if shutil.which(tool):
@@ -201,13 +195,17 @@ def initialize_secrets_baseline():
 
     if baseline_path.exists():
         print_info("Secrets baseline already exists")
-        run_command('detect-secrets scan --baseline .secrets.baseline --exclude-files ".*\\.lock$"',
-                   check=False)
+        run_command(
+            'detect-secrets scan --baseline .secrets.baseline --exclude-files ".*\\.lock$"',
+            check=False,
+        )
         print_success("Secrets baseline updated")
     else:
         print_info("Creating new secrets baseline...")
-        run_command('detect-secrets scan --baseline .secrets.baseline --exclude-files ".*\\.lock$"',
-                   check=False)
+        run_command(
+            'detect-secrets scan --baseline .secrets.baseline --exclude-files ".*\\.lock$"',
+            check=False,
+        )
         print_success("Secrets baseline created")
 
     return True
@@ -266,7 +264,7 @@ def run_initial_checks():
         print("")
         print_info("Then stage and commit the changes:")
         print(f"  {Colors.CYAN}git add .{Colors.NC}")
-        print(f"  {Colors.CYAN}git commit -m \"style: apply pre-commit auto-fixes\"{Colors.NC}")
+        print(f'  {Colors.CYAN}git commit -m "style: apply pre-commit auto-fixes"{Colors.NC}')
 
     return True
 
@@ -294,14 +292,18 @@ def print_summary():
     print(f"\n{Colors.CYAN}How It Works:{Colors.NC}")
     print("  1. Make your changes")
     print(f"  2. Stage files: {Colors.YELLOW}git add .{Colors.NC}")
-    print(f"  3. Commit: {Colors.YELLOW}git commit -m \"feat: your message\"{Colors.NC}")
+    print(f'  3. Commit: {Colors.YELLOW}git commit -m "feat: your message"{Colors.NC}')
     print("  4. Pre-commit hooks run automatically!")
 
     print(f"\n{Colors.CYAN}Useful Commands:{Colors.NC}")
     print(f"  • Run hooks manually:      {Colors.YELLOW}pre-commit run --all-files{Colors.NC}")
-    print(f"  • Auto-fix formatting:     {Colors.YELLOW}black src/ tests/ && isort src/ tests/{Colors.NC}")
+    print(
+        f"  • Auto-fix formatting:     {Colors.YELLOW}black src/ tests/ && isort src/ tests/{Colors.NC}"
+    )
     print(f"  • Update hooks:            {Colors.YELLOW}pre-commit autoupdate{Colors.NC}")
-    print(f"  • See quick reference:     {Colors.YELLOW}cat .pre-commit-quick-reference.md{Colors.NC}")
+    print(
+        f"  • See quick reference:     {Colors.YELLOW}cat .pre-commit-quick-reference.md{Colors.NC}"
+    )
 
     print(f"\n{Colors.CYAN}Documentation:{Colors.NC}")
     print("  • Quick Reference: .pre-commit-quick-reference.md")

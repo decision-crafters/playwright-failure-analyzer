@@ -25,6 +25,7 @@ repos:
     hooks:
       - id: gitleaks
         name: 🕵️ Gitleaks secret scanner
+        exclude: ^\.secrets\.baseline$
 
   # GitHub Actions workflow validation
   - repo: https://github.com/python-jsonschema/check-jsonschema
@@ -91,7 +92,6 @@ repos:
       # File format checks
       - id: check-yaml
         name: ✓ Check YAML syntax
-        args: ['--safe']
 
       - id: check-json
         name: ✓ Check JSON syntax

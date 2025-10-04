@@ -55,7 +55,7 @@ We recommend using one of these development environments:
    # Create virtual environment
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
-   
+
    # Install dependencies
    pip install -r requirements.txt
    pip install -r requirements-dev.txt  # Development dependencies
@@ -219,10 +219,10 @@ def test_parse_report_with_max_failures_limit(self):
     # Arrange
     report_data = self.create_report_with_failures(5)
     parser = PlaywrightReportParser(report_data, self.error_handler)
-    
+
     # Act
     summary = parser.parse_failures(max_failures=3)
-    
+
     # Assert
     self.assertEqual(len(summary.failures), 3)
     self.assertEqual(summary.failed_tests, 5)  # Still reports total

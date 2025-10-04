@@ -28,7 +28,7 @@
 ```python
 class AIAnalyzer:
     """AI-powered analyzer for test failures using LiteLLM."""
-    
+
     def analyze_failures(self, failures, metadata):
         """Analyze test failures using AI to provide insights."""
         # Uses LiteLLM to call various AI models
@@ -66,8 +66,8 @@ When AI analysis is enabled, issues include sections like:
 **Summary**: Multiple test failures due to element selector issues
 
 ### Root Cause Analysis
-The failures appear to be caused by outdated element selectors that no longer 
-match the current DOM structure. This suggests recent UI changes that weren't 
+The failures appear to be caused by outdated element selectors that no longer
+match the current DOM structure. This suggests recent UI changes that weren't
 reflected in the test automation.
 
 ### Suggested Actions
