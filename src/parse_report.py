@@ -104,7 +104,9 @@ class PlaywrightReportParser:
             self.load_report()
 
         # Type narrowing: report_data is guaranteed to be Dict after load_report()
-        assert self.report_data is not None, "report_data must be loaded before parsing"
+        assert (
+            self.report_data is not None
+        ), "report_data must be loaded before parsing"  # nosec B101
 
         # Validate report structure
         self.validator.validate_report_structure(self.report_data)

@@ -53,8 +53,8 @@ class ErrorCodes:
     INVALID_JSON = "INVALID_JSON"
 
     # Configuration errors
-    MISSING_TOKEN = "MISSING_TOKEN"
-    INVALID_TOKEN = "INVALID_TOKEN"
+    MISSING_TOKEN = "MISSING_TOKEN"  # nosec B105  # This is an error code constant, not a password
+    INVALID_TOKEN = "INVALID_TOKEN"  # nosec B105  # This is an error code constant, not a password
     MISSING_REPOSITORY = "MISSING_REPOSITORY"
     INVALID_CONFIG = "INVALID_CONFIG"
 

@@ -68,7 +68,7 @@ def generate_issue_hash(title: str, failures: List[Dict[str, Any]]) -> str:
         signature = f"{failure.get('test_name', '')}{failure.get('error_message', '')}"
         content += signature
 
-    return hashlib.md5(content.encode("utf-8")).hexdigest()[:8]
+    return hashlib.md5(content.encode("utf-8"), usedforsecurity=False).hexdigest()[:8]
 
 
 def format_duration(duration_ms: float) -> str:
