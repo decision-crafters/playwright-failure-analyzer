@@ -282,13 +282,13 @@ def main():
 
     set_github_output("failures-count", str(summary.failed_tests))
 
-    # Exit with appropriate code
+    # Print summary and exit successfully
+    # Note: Finding failures is expected behavior, not an error condition
     if summary.failed_tests > 0:
         print(f"Found {summary.failed_tests} test failures")
-        sys.exit(1)  # Indicate failures were found
     else:
         print("No test failures found")
-        sys.exit(0)
+    sys.exit(0)  # Exit successfully after parsing
 
 
 if __name__ == "__main__":
