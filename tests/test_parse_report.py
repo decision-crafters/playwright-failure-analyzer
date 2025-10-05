@@ -19,7 +19,7 @@ try:
     from error_handling import ActionError
 except ImportError:
     # Fallback for testing
-    class ActionError(Exception):
+    class ActionError(Exception):  # type: ignore[no-redef]
         def __init__(self, code, message, severity, **kwargs):
             self.code = code
             self.message = message

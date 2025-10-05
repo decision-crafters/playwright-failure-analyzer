@@ -29,7 +29,7 @@ class ErrorSeverity(Enum):
 
 
 @dataclass
-class ActionError:
+class ActionError(Exception):
     """Represents an error that occurred during action execution."""
 
     code: str
@@ -37,6 +37,10 @@ class ActionError:
     severity: ErrorSeverity
     details: Optional[Dict[str, Any]] = None
     suggestions: Optional[List[str]] = None
+
+    def __post_init__(self):
+        """Initialize the Exception with the error message."""
+        super().__init__(self.message)
 
 
 class ErrorCodes:

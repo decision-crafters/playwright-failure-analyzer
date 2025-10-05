@@ -37,20 +37,31 @@ from utils import (
 )
 
 try:
-    from ai_analysis import AIAnalysisFormatter, analyze_failures_with_ai
+    from ai_analysis import AIAnalysisFormatter, AIAnalysisResult, analyze_failures_with_ai
 
     AI_ANALYSIS_AVAILABLE = True
 except ImportError:
-    # AI analysis not available - create dummy functions
-    def analyze_failures_with_ai(*args, **kwargs):
+    # AI analysis not available - create dummy implementations
+    AI_ANALYSIS_AVAILABLE = False
+
+    # Create a dummy AIAnalysisResult type for type hints
+    class AIAnalysisResult:  # type: ignore[no-redef]
+        """Dummy result class when AI analysis is not available."""
+
+        pass
+
+    def analyze_failures_with_ai(  # type: ignore[no-redef]
+        failures: List[Dict[str, Any]], metadata: Dict[str, Any], enabled: bool = True
+    ) -> Optional[AIAnalysisResult]:
+        """Dummy function when AI analysis is not available."""
         return None
 
-    class AIAnalysisFormatter:
-        @staticmethod
-        def format_analysis_section(analysis):
-            return ""
+    class AIAnalysisFormatter:  # type: ignore[no-redef]
+        """Dummy formatter when AI analysis is not available."""
 
-    AI_ANALYSIS_AVAILABLE = False
+        @staticmethod
+        def format_analysis_section(analysis: Optional[AIAnalysisResult]) -> str:
+            return ""
 
 
 class GitHubAPIClient:
@@ -123,7 +134,7 @@ class GitHubAPIClient:
         """Create a new GitHub issue."""
         endpoint = f"/repos/{self.repository}/issues"
 
-        data = {"title": title, "body": body}
+        data: Dict[str, Any] = {"title": title, "body": body}
 
         if labels:
             data["labels"] = labels

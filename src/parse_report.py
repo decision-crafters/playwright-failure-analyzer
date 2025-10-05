@@ -103,6 +103,9 @@ class PlaywrightReportParser:
         if self.report_data is None:
             self.load_report()
 
+        # Type narrowing: report_data is guaranteed to be Dict after load_report()
+        assert self.report_data is not None, "report_data must be loaded before parsing"
+
         # Validate report structure
         self.validator.validate_report_structure(self.report_data)
         self.validator.validate_has_test_results(self.report_data)
