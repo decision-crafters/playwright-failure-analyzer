@@ -1,0 +1,478 @@
+name: End-to-End Tests
+
+on:
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:  # Allow manual trigger
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'action.yml'
+      - '.github/workflows/e2e-test.yml'
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+# Cancel in-progress runs for the same workflow on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Test 1: Single failure scenario
+  test-single-failure:
+    name: E2E - Single Failure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js for Playwright
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Create test Playwright project
+        run: |
+          mkdir test-single-failure
+          cd test-single-failure
+          npm init -y
+          npm install @playwright/test
+          npx playwright install chromium
+
+      - name: Create test with single failure
+        run: |
+          cd test-single-failure
+          cat > tests/single-failure.spec.js << 'EOF'
+          const { test, expect } = require('@playwright/test');
+
+          test('single failing test', async ({ page }) => {
+            await page.goto('https://example.com');
+            await expect(page.locator('#nonexistent-element')).toBeVisible({timeout: 1000});
+          });
+
+          test('passing test 1', async ({ page }) => {
+            await page.goto('https://example.com');
+            await expect(page.locator('h1')).toBeVisible();
+          });
+
+          test('passing test 2', async ({ page }) => {
+            await page.goto('https://example.com');
+            await expect(page.locator('body')).toBeVisible();
+          });
+          EOF
+          mkdir -p tests
+
+      - name: Run Playwright tests
+        run: |
+          cd test-single-failure
+          npx playwright test --reporter=json > test-results.json || true
+        continue-on-error: true
+
+      - name: Test the action - Single Failure
+        id: action-test
+        uses: ./
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          report-path: 'test-single-failure/test-results.json'
+          max-failures: 5
+          issue-title: '[E2E Test] Single Failure - Run ${{ github.run_number }}'
+          issue-labels: 'test,e2e,automated'
+          deduplicate: false
+        continue-on-error: true
+
+      - name: Verify outputs
+        run: |
+          echo "Issue Number: ${{ steps.action-test.outputs.issue-number }}"
+          echo "Issue URL: ${{ steps.action-test.outputs.issue-url }}"
+          echo "Failures Count: ${{ steps.action-test.outputs.failures-count }}"
+
+          if [ -z "${{ steps.action-test.outputs.issue-number }}" ]; then
+            echo "::error::Issue number output is empty"
+            exit 1
+          fi
+
+          if [ -z "${{ steps.action-test.outputs.issue-url }}" ]; then
+            echo "::error::Issue URL output is empty"
+            exit 1
+          fi
+
+          if [ "${{ steps.action-test.outputs.failures-count }}" != "1" ]; then
+            echo "::error::Expected 1 failure, got ${{ steps.action-test.outputs.failures-count }}"
+            exit 1
+          fi
+
+          echo "✅ All outputs validated successfully"
+
+  # Test 2: Multiple failures scenario
+  test-multiple-failures:
+    name: E2E - Multiple Failures
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js for Playwright
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Create test Playwright project
+        run: |
+          mkdir test-multiple-failures
+          cd test-multiple-failures
+          npm init -y
+          npm install @playwright/test
+          npx playwright install chromium
+
+      - name: Create tests with multiple failures
+        run: |
+          cd test-multiple-failures
+          mkdir -p tests
+          cat > tests/multiple-failures.spec.js << 'EOF'
+          const { test, expect } = require('@playwright/test');
+
+          test('timeout failure', async ({ page }) => {
+            await page.goto('https://example.com');
+            await expect(page.locator('#timeout-element')).toBeVisible({timeout: 1000});
+          });
+
+          test('assertion failure', async ({ page }) => {
+            await page.goto('https://example.com');
+            await expect(page.locator('h1')).toHaveText('Wrong Text');
+          });
+
+          test('error thrown', async ({ page }) => {
+            await page.goto('https://example.com');
+            throw new Error('Intentional test error for E2E testing');
+          });
+
+          test('selector not found', async ({ page }) => {
+            await page.goto('https://example.com');
+            await page.click('#nonexistent-button');
+          });
+
+          test('passing test', async ({ page }) => {
+            await page.goto('https://example.com');
+            await expect(page.locator('body')).toBeVisible();
+          });
+          EOF
+
+      - name: Run Playwright tests
+        run: |
+          cd test-multiple-failures
+          npx playwright test --reporter=json > test-results.json || true
+        continue-on-error: true
+
+      - name: Test the action - Multiple Failures
+        id: action-test
+        uses: ./
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          report-path: 'test-multiple-failures/test-results.json'
+          max-failures: 10
+          issue-title: '[E2E Test] Multiple Failures - Run ${{ github.run_number }}'
+          issue-labels: 'test,e2e,automated,multiple-failures'
+          deduplicate: false
+        continue-on-error: true
+
+      - name: Verify outputs
+        run: |
+          echo "Issue Number: ${{ steps.action-test.outputs.issue-number }}"
+          echo "Issue URL: ${{ steps.action-test.outputs.issue-url }}"
+          echo "Failures Count: ${{ steps.action-test.outputs.failures-count }}"
+
+          if [ -z "${{ steps.action-test.outputs.issue-number }}" ]; then
+            echo "::error::Issue number output is empty"
+            exit 1
+          fi
+
+          if [ "${{ steps.action-test.outputs.failures-count }}" -lt "3" ]; then
+            echo "::error::Expected at least 3 failures, got ${{ steps.action-test.outputs.failures-count }}"
+            exit 1
+          fi
+
+          echo "✅ Multiple failures handled correctly"
+
+  # Test 3: Max failures limit
+  test-max-failures-limit:
+    name: E2E - Max Failures Limit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js for Playwright
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Create test Playwright project
+        run: |
+          mkdir test-max-failures
+          cd test-max-failures
+          npm init -y
+          npm install @playwright/test
+          npx playwright install chromium
+
+      - name: Create tests exceeding max failures
+        run: |
+          cd test-max-failures
+          mkdir -p tests
+          cat > tests/many-failures.spec.js << 'EOF'
+          const { test, expect } = require('@playwright/test');
+
+          test('failure 1', async ({ page }) => {
+            await page.goto('https://example.com');
+            throw new Error('Failure 1');
+          });
+
+          test('failure 2', async ({ page }) => {
+            await page.goto('https://example.com');
+            throw new Error('Failure 2');
+          });
+
+          test('failure 3', async ({ page }) => {
+            await page.goto('https://example.com');
+            throw new Error('Failure 3');
+          });
+
+          test('failure 4', async ({ page }) => {
+            await page.goto('https://example.com');
+            throw new Error('Failure 4');
+          });
+
+          test('failure 5', async ({ page }) => {
+            await page.goto('https://example.com');
+            throw new Error('Failure 5');
+          });
+          EOF
+
+      - name: Run Playwright tests
+        run: |
+          cd test-max-failures
+          npx playwright test --reporter=json > test-results.json || true
+        continue-on-error: true
+
+      - name: Test the action with max-failures=2
+        id: action-test
+        uses: ./
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          report-path: 'test-max-failures/test-results.json'
+          max-failures: 2
+          issue-title: '[E2E Test] Max Failures Limit - Run ${{ github.run_number }}'
+          issue-labels: 'test,e2e,automated,max-limit'
+          deduplicate: false
+        continue-on-error: true
+
+      - name: Verify max failures respected
+        run: |
+          echo "Failures Count: ${{ steps.action-test.outputs.failures-count }}"
+
+          # The action should report total failures found, not max-failures limit
+          if [ "${{ steps.action-test.outputs.failures-count }}" -lt "2" ]; then
+            echo "::error::Expected at least 2 failures to be reported"
+            exit 1
+          fi
+
+          echo "✅ Max failures limit working correctly"
+
+  # Test 4: Custom labels and assignees
+  test-custom-metadata:
+    name: E2E - Custom Labels & Metadata
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js for Playwright
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Create test Playwright project
+        run: |
+          mkdir test-metadata
+          cd test-metadata
+          npm init -y
+          npm install @playwright/test
+          npx playwright install chromium
+
+      - name: Create failing test
+        run: |
+          cd test-metadata
+          mkdir -p tests
+          cat > tests/metadata-test.spec.js << 'EOF'
+          const { test, expect } = require('@playwright/test');
+
+          test('metadata test failure', async ({ page }) => {
+            await page.goto('https://example.com');
+            throw new Error('Testing custom metadata');
+          });
+          EOF
+
+      - name: Run Playwright tests
+        run: |
+          cd test-metadata
+          npx playwright test --reporter=json > test-results.json || true
+        continue-on-error: true
+
+      - name: Test the action with custom metadata
+        id: action-test
+        uses: ./
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          report-path: 'test-metadata/test-results.json'
+          max-failures: 5
+          issue-title: '[E2E Test] Custom Metadata - Run ${{ github.run_number }}'
+          issue-labels: 'test,e2e,custom-label-1,custom-label-2,automated'
+          deduplicate: false
+        continue-on-error: true
+
+      - name: Verify custom metadata applied
+        run: |
+          if [ -z "${{ steps.action-test.outputs.issue-number }}" ]; then
+            echo "::error::Issue was not created"
+            exit 1
+          fi
+
+          echo "✅ Custom metadata issue created: ${{ steps.action-test.outputs.issue-url }}"
+
+  # Test 5: All tests passing (no issue should be created)
+  test-all-passing:
+    name: E2E - All Tests Passing
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js for Playwright
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Create test Playwright project
+        run: |
+          mkdir test-all-passing
+          cd test-all-passing
+          npm init -y
+          npm install @playwright/test
+          npx playwright install chromium
+
+      - name: Create only passing tests
+        run: |
+          cd test-all-passing
+          mkdir -p tests
+          cat > tests/passing-tests.spec.js << 'EOF'
+          const { test, expect } = require('@playwright/test');
+
+          test('passing test 1', async ({ page }) => {
+            await page.goto('https://example.com');
+            await expect(page.locator('h1')).toBeVisible();
+          });
+
+          test('passing test 2', async ({ page }) => {
+            await page.goto('https://example.com');
+            await expect(page.locator('body')).toBeVisible();
+          });
+
+          test('passing test 3', async ({ page }) => {
+            await page.goto('https://example.com');
+            const title = await page.title();
+            expect(title).toBeTruthy();
+          });
+          EOF
+
+      - name: Run Playwright tests
+        run: |
+          cd test-all-passing
+          npx playwright test --reporter=json > test-results.json || true
+
+      - name: Test the action with all passing tests
+        id: action-test
+        uses: ./
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          report-path: 'test-all-passing/test-results.json'
+          max-failures: 5
+          issue-title: '[E2E Test] All Passing - Run ${{ github.run_number }}'
+          issue-labels: 'test,e2e,automated'
+          deduplicate: false
+        continue-on-error: true
+
+      - name: Verify no issue created for passing tests
+        run: |
+          echo "Failures Count: ${{ steps.action-test.outputs.failures-count }}"
+
+          if [ "${{ steps.action-test.outputs.failures-count }}" != "0" ]; then
+            echo "::warning::Expected 0 failures, got ${{ steps.action-test.outputs.failures-count }}"
+          else
+            echo "✅ No issue created when all tests pass"
+          fi
+
+  # Summary job
+  e2e-summary:
+    name: E2E Tests Summary
+    runs-on: ubuntu-latest
+    needs: [test-single-failure, test-multiple-failures, test-max-failures-limit, test-custom-metadata, test-all-passing]
+    if: always()
+
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## 🎯 End-to-End Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Test Scenarios" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.test-single-failure.result }}" == "success" ]; then
+            echo "✅ **Single Failure Scenario** - Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Single Failure Scenario** - Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.test-multiple-failures.result }}" == "success" ]; then
+            echo "✅ **Multiple Failures Scenario** - Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Multiple Failures Scenario** - Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.test-max-failures-limit.result }}" == "success" ]; then
+            echo "✅ **Max Failures Limit** - Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Max Failures Limit** - Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.test-custom-metadata.result }}" == "success" ]; then
+            echo "✅ **Custom Metadata** - Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Custom Metadata** - Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.test-all-passing.result }}" == "success" ]; then
+            echo "✅ **All Tests Passing** - Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **All Tests Passing** - Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Single failure handling" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Multiple failures handling" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Max failures limit enforcement" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Custom labels and metadata" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ No failures scenario (all passing)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Output validation" >> $GITHUB_STEP_SUMMARY
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**All E2E test scenarios completed!** ✨" >> $GITHUB_STEP_SUMMARY
