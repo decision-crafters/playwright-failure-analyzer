@@ -115,9 +115,7 @@ class PlaywrightReportParser:
         # Extract basic statistics
         stats = self.report_data.get("stats", {})
         total_tests = (
-            stats.get("expected", 0)
-            + stats.get("unexpected", 0)
-            + stats.get("skipped", 0)
+            stats.get("expected", 0) + stats.get("unexpected", 0) + stats.get("skipped", 0)
         )
         passed_tests = stats.get("expected", 0)
         failed_tests = stats.get("unexpected", 0)
@@ -173,9 +171,7 @@ class PlaywrightReportParser:
 
         return failures
 
-    def _extract_spec_failures(
-        self, spec: Dict[str, Any], suite_title: str
-    ) -> List[TestFailure]:
+    def _extract_spec_failures(self, spec: Dict[str, Any], suite_title: str) -> List[TestFailure]:
         """Extract failures from a test spec."""
         failures = []
 
@@ -246,13 +242,9 @@ def main():
     parser = argparse.ArgumentParser(
         description="Parse Playwright JSON report and extract failures"
     )
-    parser.add_argument(
-        "--report-path", required=True, help="Path to the Playwright JSON report"
-    )
+    parser.add_argument("--report-path", required=True, help="Path to the Playwright JSON report")
     parser.add_argument("--max-failures", help="Maximum number of failures to extract")
-    parser.add_argument(
-        "--output-file", required=True, help="Output file for failure summary JSON"
-    )
+    parser.add_argument("--output-file", required=True, help="Output file for failure summary JSON")
 
     args = parser.parse_args()
 

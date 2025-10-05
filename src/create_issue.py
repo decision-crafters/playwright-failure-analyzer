@@ -284,9 +284,7 @@ class IssueFormatter:
 | **Timestamp** | {format_timestamp()} |"""
 
         if metadata.get("playwright_version"):
-            debug_info += (
-                f"\n| **Playwright Version** | {metadata['playwright_version']} |"
-            )
+            debug_info += f"\n| **Playwright Version** | {metadata['playwright_version']} |"
 
         if metadata.get("projects"):
             projects = ", ".join(metadata["projects"])
@@ -367,21 +365,11 @@ class IssueManager:
 @error_handler(setup_error_handling())
 def main():
     """Main entry point for the script."""
-    parser = argparse.ArgumentParser(
-        description="Create GitHub issue from test failure summary"
-    )
-    parser.add_argument(
-        "--summary-file", required=True, help="Path to failure summary JSON file"
-    )
-    parser.add_argument(
-        "--issue-title", required=True, help="Title for the GitHub issue"
-    )
-    parser.add_argument(
-        "--issue-labels", default="", help="Comma-separated list of labels"
-    )
-    parser.add_argument(
-        "--assignees", default="", help="Comma-separated list of assignees"
-    )
+    parser = argparse.ArgumentParser(description="Create GitHub issue from test failure summary")
+    parser.add_argument("--summary-file", required=True, help="Path to failure summary JSON file")
+    parser.add_argument("--issue-title", required=True, help="Title for the GitHub issue")
+    parser.add_argument("--issue-labels", default="", help="Comma-separated list of labels")
+    parser.add_argument("--assignees", default="", help="Comma-separated list of assignees")
     parser.add_argument(
         "--deduplicate", default="true", help="Whether to check for existing issues"
     )
@@ -421,9 +409,7 @@ def main():
             code=ErrorCodes.INVALID_JSON,
             message=f"Invalid JSON in summary file: {e}",
             severity=ErrorSeverity.HIGH,
-            suggestions=[
-                "Check that the parse_report.py script completed successfully"
-            ],
+            suggestions=["Check that the parse_report.py script completed successfully"],
         )
 
     # Check if there are any failures to report
@@ -448,9 +434,7 @@ def main():
                 summary["failures"], summary["metadata"], enabled=True
             )
             if ai_analysis:
-                print(
-                    f"AI analysis completed with {ai_analysis.confidence_score:.1%} confidence"
-                )
+                print(f"AI analysis completed with {ai_analysis.confidence_score:.1%} confidence")
             else:
                 print("AI analysis failed or not configured")
         else:
