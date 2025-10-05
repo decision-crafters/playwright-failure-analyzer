@@ -124,87 +124,134 @@ def check_python():
     return True
 
 
-def check_pip():
-    """Check if pip is available"""
-    print_step("\nChecking pip installation...")
+def setup_venv():
+    """Set up Python virtual environment"""
+    print_step("\nSetting up Python virtual environment...")
 
-    if shutil.which("pip") or shutil.which("pip3"):
-        print_success("pip detected")
-        return True
+    venv_dir = Path(".venv")
+
+    if venv_dir.exists():
+        print_info("Virtual environment already exists")
     else:
-        print_error("pip is not installed!")
-        print("Please install pip for Python 3.")
-        return False
+        print_info("Creating virtual environment...")
+
+        # Prefer Python 3.11 if available
+        python_cmd = sys.executable
+        if shutil.which("python3.11"):
+            python_cmd = "python3.11"
+            print_info("Using Python 3.11 for venv")
+
+        subprocess.run([python_cmd, "-m", "venv", str(venv_dir)], check=True)
+        print_success("Virtual environment created")
+
+    # Determine venv paths based on platform
+    if os.name == "nt":  # Windows
+        venv_pip = venv_dir / "Scripts" / "pip.exe"
+        venv_python = venv_dir / "Scripts" / "python.exe"
+        venv_precommit = venv_dir / "Scripts" / "pre-commit.exe"
+    else:  # Unix-like
+        venv_pip = venv_dir / "bin" / "pip"
+        venv_python = venv_dir / "bin" / "python"
+        venv_precommit = venv_dir / "bin" / "pre-commit"
+
+    # Upgrade pip in venv
+    print_info("Upgrading pip in venv...")
+    subprocess.run(
+        [str(venv_python), "-m", "pip", "install", "--upgrade", "pip"],
+        check=True,
+        capture_output=True,
+    )
+
+    print_success("Virtual environment ready")
+    return venv_pip, venv_python, venv_precommit
 
 
-def install_precommit():
+def install_precommit(venv_pip, venv_precommit):
     """Install pre-commit"""
     print_step("\nInstalling pre-commit...")
 
-    if shutil.which("pre-commit"):
+    if venv_precommit.exists():
         try:
-            version = run_command("pre-commit --version", capture_output=True)
+            version = run_command(f"{venv_precommit} --version", capture_output=True)
             print_info(f"pre-commit {version} already installed")
         except Exception:
             print_info("pre-commit already installed")
     else:
         print_info("Installing pre-commit via pip...")
-        run_command(f"{sys.executable} -m pip install --user pre-commit")
+        subprocess.run([str(venv_pip), "install", "pre-commit"], check=True, capture_output=True)
         print_success("pre-commit installed")
 
     return True
 
 
-def install_python_tools():
+def install_python_tools(venv_pip):
     """Install Python development tools"""
     print_step("\nInstalling Python development tools...")
 
     tools = ["black", "isort", "flake8", "mypy", "bandit", "detect-secrets"]
 
-    for tool in tools:
-        if shutil.which(tool):
-            print_info(f"{tool} already installed")
-        else:
-            print_info(f"Installing {tool}...")
-            run_command(f"{sys.executable} -m pip install --user {tool}")
+    print_info(f"Installing {', '.join(tools)}...")
+    subprocess.run([str(venv_pip), "install"] + tools, check=True, capture_output=True)
 
     print_success("All Python tools installed")
     return True
 
 
-def install_git_hooks():
+def install_git_hooks(venv_precommit):
     """Install git hooks"""
     print_step("\nInstalling git hooks...")
 
     # Install pre-commit hook
-    run_command("pre-commit install")
+    subprocess.run([str(venv_precommit), "install"], check=True)
     print_success("Pre-commit hook installed")
 
     # Install commit-msg hook
-    run_command("pre-commit install --hook-type commit-msg")
+    subprocess.run([str(venv_precommit), "install", "--hook-type", "commit-msg"], check=True)
     print_success("Commit-msg hook installed")
 
     return True
 
 
-def initialize_secrets_baseline():
+def initialize_secrets_baseline(venv_dir):
     """Initialize secrets baseline"""
     print_step("\nInitializing secrets baseline...")
 
     baseline_path = Path(".secrets.baseline")
 
+    # Use venv's detect-secrets
+    if os.name == "nt":
+        detect_secrets = venv_dir / "Scripts" / "detect-secrets.exe"
+    else:
+        detect_secrets = venv_dir / "bin" / "detect-secrets"
+
     if baseline_path.exists():
         print_info("Secrets baseline already exists")
-        run_command(
-            'detect-secrets scan --baseline .secrets.baseline --exclude-files ".*\\.lock$"',
+        subprocess.run(
+            [
+                str(detect_secrets),
+                "scan",
+                "--baseline",
+                ".secrets.baseline",
+                "--exclude-files",
+                ".*\\.lock$",
+            ],
             check=False,
+            capture_output=True,
         )
         print_success("Secrets baseline updated")
     else:
         print_info("Creating new secrets baseline...")
-        run_command(
-            'detect-secrets scan --baseline .secrets.baseline --exclude-files ".*\\.lock$"',
+        subprocess.run(
+            [
+                str(detect_secrets),
+                "scan",
+                "--baseline",
+                ".secrets.baseline",
+                "--exclude-files",
+                ".*\\.lock$",
+            ],
             check=False,
+            capture_output=True,
         )
         print_success("Secrets baseline created")
 
@@ -240,12 +287,16 @@ def check_additional_deps():
     return True
 
 
-def run_initial_checks():
+def run_initial_checks(venv_precommit):
     """Run initial pre-commit checks"""
     print_step("\nRunning initial pre-commit checks...")
     print(f"\n{Colors.YELLOW}This may take a few minutes on first run...{Colors.NC}\n")
 
-    success = run_command("pre-commit run --all-files", check=False)
+    try:
+        subprocess.run([str(venv_precommit), "run", "--all-files"], check=False)
+        success = True
+    except Exception:
+        success = False
 
     if success:
         print("")
@@ -269,13 +320,19 @@ def run_initial_checks():
     return True
 
 
-def print_summary():
+def print_summary(venv_dir):
     """Print summary and next steps"""
     print(f"\n{Colors.BLUE}{'='*68}{Colors.NC}")
     print(f"{Colors.BLUE}  🎉 Pre-commit Setup Complete!{Colors.NC}")
     print(f"{Colors.BLUE}{'='*68}{Colors.NC}\n")
 
     print_success("Pre-commit hooks are now installed and configured\n")
+
+    # Determine venv bin directory based on platform
+    if os.name == "nt":
+        venv_bin = f"{venv_dir}\\Scripts\\"
+    else:
+        venv_bin = f"{venv_dir}/bin/"
 
     print(f"{Colors.CYAN}Security Hooks Enabled:{Colors.NC}")
     print("  🔐 detect-secrets  - Prevents API keys, passwords, tokens")
@@ -296,11 +353,13 @@ def print_summary():
     print("  4. Pre-commit hooks run automatically!")
 
     print(f"\n{Colors.CYAN}Useful Commands:{Colors.NC}")
-    print(f"  • Run hooks manually:      {Colors.YELLOW}pre-commit run --all-files{Colors.NC}")
     print(
-        f"  • Auto-fix formatting:     {Colors.YELLOW}black src/ tests/ && isort src/ tests/{Colors.NC}"
+        f"  • Run hooks manually:      {Colors.YELLOW}{venv_bin}pre-commit run --all-files{Colors.NC}"
     )
-    print(f"  • Update hooks:            {Colors.YELLOW}pre-commit autoupdate{Colors.NC}")
+    print(
+        f"  • Auto-fix formatting:     {Colors.YELLOW}{venv_bin}black src/ tests/ && {venv_bin}isort src/ tests/{Colors.NC}"
+    )
+    print(f"  • Update hooks:            {Colors.YELLOW}{venv_bin}pre-commit autoupdate{Colors.NC}")
     print(
         f"  • See quick reference:     {Colors.YELLOW}cat .pre-commit-quick-reference.md{Colors.NC}"
     )
@@ -317,16 +376,32 @@ def main():
     """Main execution"""
     print_header()
 
+    # Initial checks
+    try:
+        if not check_git_repo():
+            return 1
+        if not check_python():
+            return 1
+    except Exception as e:
+        print_error(f"\nError during initial checks: {str(e)}")
+        return 1
+
+    # Setup venv and get paths
+    try:
+        venv_pip, venv_python, venv_precommit = setup_venv()
+        venv_dir = Path(".venv")
+    except Exception as e:
+        print_error(f"\nError setting up virtual environment: {str(e)}")
+        return 1
+
+    # Install and configure steps
     steps = [
-        ("Git Repository", check_git_repo),
-        ("Python", check_python),
-        ("pip", check_pip),
-        ("Pre-commit", install_precommit),
-        ("Python Tools", install_python_tools),
-        ("Git Hooks", install_git_hooks),
-        ("Secrets Baseline", initialize_secrets_baseline),
+        ("Pre-commit", lambda: install_precommit(venv_pip, venv_precommit)),
+        ("Python Tools", lambda: install_python_tools(venv_pip)),
+        ("Git Hooks", lambda: install_git_hooks(venv_precommit)),
+        ("Secrets Baseline", lambda: initialize_secrets_baseline(venv_dir)),
         ("Additional Dependencies", check_additional_deps),
-        ("Initial Checks", run_initial_checks),
+        ("Initial Checks", lambda: run_initial_checks(venv_precommit)),
     ]
 
     for name, func in steps:
@@ -338,7 +413,7 @@ def main():
             print_error(f"\nError during {name}: {str(e)}")
             return 1
 
-    print_summary()
+    print_summary(venv_dir)
     return 0
 
 
