@@ -59,7 +59,7 @@ jobs:
 
       - name: Analyze failures with the action
         if: always()  # Run even if tests pass
-        uses: decision-crafters/playwright-failure-analyzer@main
+        uses: decision-crafters/playwright-failure-analyzer@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           report-path: 'test-results.json'
@@ -223,7 +223,7 @@ Modify `.github/workflows/test-failure-analyzer.yml` to add AI analysis:
 ```yaml
       - name: Analyze failures with AI
         if: always()
-        uses: decision-crafters/playwright-failure-analyzer@main
+        uses: decision-crafters/playwright-failure-analyzer@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           report-path: 'test-results.json'
@@ -359,7 +359,7 @@ module.exports = {
 - run: npx playwright test --reporter=json > test-results.json
 
 # Action reads the report from where you saved it
-- uses: decision-crafters/playwright-failure-analyzer@main
+- uses: decision-crafters/playwright-failure-analyzer@v1
   with:
     report-path: 'test-results.json'  # Must match above!
 ```

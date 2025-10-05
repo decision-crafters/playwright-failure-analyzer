@@ -61,7 +61,7 @@ jobs:
 
       - name: Analyze test failures
         if: failure()  # Only run if tests failed
-        uses: decision-crafters/playwright-failure-analyzer@v1
+        uses: decision-crafters/playwright-failure-analyzer@v1  # or @v1.0.0 for locked version
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           report-path: 'test-results.json'
@@ -76,7 +76,7 @@ Get intelligent insights and suggestions with AI:
 ```yaml
       - name: Analyze test failures with AI
         if: failure()
-        uses: decision-crafters/playwright-failure-analyzer@v1
+        uses: decision-crafters/playwright-failure-analyzer@v1  # Stable release
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           report-path: 'test-results.json'
