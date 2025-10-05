@@ -185,7 +185,11 @@ class PlaywrightReportParser:
         return failures
 
     def _create_test_failure(
-        self, test: Dict[str, Any], result: Dict[str, Any], spec: Dict[str, Any], suite_title: str
+        self,
+        test: Dict[str, Any],
+        result: Dict[str, Any],
+        spec: Dict[str, Any],
+        suite_title: str,
     ) -> Optional[TestFailure]:
         """Create a TestFailure object from test result data."""
         try:

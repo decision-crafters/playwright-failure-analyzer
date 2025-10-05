@@ -123,13 +123,21 @@ class GitHubAPIClient:
     def search_issues(self, query: str) -> List[Dict[str, Any]]:
         """Search for issues matching the given query."""
         endpoint = "/search/issues"
-        params = {"q": f"repo:{self.repository} {query}", "sort": "created", "order": "desc"}
+        params = {
+            "q": f"repo:{self.repository} {query}",
+            "sort": "created",
+            "order": "desc",
+        }
 
         response = self._make_request("GET", endpoint, params)
         return response.json().get("items", [])
 
     def create_issue(
-        self, title: str, body: str, labels: List[str] = None, assignees: List[str] = None
+        self,
+        title: str,
+        body: str,
+        labels: List[str] = None,
+        assignees: List[str] = None,
     ) -> Dict[str, Any]:
         """Create a new GitHub issue."""
         endpoint = f"/repos/{self.repository}/issues"

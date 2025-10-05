@@ -48,7 +48,7 @@ jobs:
           pytest tests/ --cov=src --cov-report=xml --cov-report=html
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           file: ./coverage.xml
           fail_ci_if_error: false
@@ -133,7 +133,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload security scan results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: security-scan-results
           path: bandit-report.json
@@ -189,7 +189,7 @@ jobs:
           cp action.yml requirements.txt LICENSE README.md release-package/
 
       - name: Upload release artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: release-package-${{ github.event.release.tag_name }}
           path: release-package/

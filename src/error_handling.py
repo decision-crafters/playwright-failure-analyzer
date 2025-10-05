@@ -127,7 +127,11 @@ class ActionErrorHandler:
     ) -> ActionError:
         """Create a new ActionError with standard formatting."""
         return ActionError(
-            code=code, message=message, severity=severity, details=details, suggestions=suggestions
+            code=code,
+            message=message,
+            severity=severity,
+            details=details,
+            suggestions=suggestions,
         )
 
 
@@ -150,7 +154,7 @@ def error_handler(handler: ActionErrorHandler):
                     details={
                         "function": func.__name__,
                         "exception_type": type(e).__name__,
-                        "traceback": traceback.format_exc() if handler.debug_mode else None,
+                        "traceback": (traceback.format_exc() if handler.debug_mode else None),
                     },
                 )
                 handler.handle_error(error)
