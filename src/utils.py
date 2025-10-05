@@ -5,8 +5,35 @@ Utility functions for the Playwright Failure Bundler action.
 
 import hashlib
 import os
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+
+# ANSI escape code pattern for stripping terminal colors/formatting
+ANSI_ESCAPE_PATTERN = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+
+
+def strip_ansi_codes(text: str) -> str:
+    """
+    Remove ANSI escape codes (terminal colors/formatting) from text.
+
+    These codes are useful in terminals but render as garbage in GitHub issues.
+
+    Examples of ANSI codes:
+    - \\x1b[31m = red text
+    - \\x1b[2m = dim text
+    - \\x1b[22m = normal intensity
+    - \\x1b[39m = default color
+
+    Args:
+        text: Text potentially containing ANSI escape codes
+
+    Returns:
+        Text with all ANSI escape codes removed
+    """
+    if not text:
+        return text
+    return ANSI_ESCAPE_PATTERN.sub("", text)
 
 
 def get_github_context() -> Dict[str, str]:
@@ -109,6 +136,9 @@ def format_stack_trace(stack_trace: str, max_lines: int = 20) -> str:
     """Format and truncate stack trace for better readability."""
     if not stack_trace:
         return "No stack trace available"
+
+    # Strip ANSI color codes before processing
+    stack_trace = strip_ansi_codes(stack_trace)
 
     lines = stack_trace.strip().split("\n")
 

@@ -33,6 +33,7 @@ from utils import (
     parse_comma_separated,
     sanitize_for_github,
     set_github_output,
+    strip_ansi_codes,
     truncate_text,
 )
 
@@ -231,17 +232,17 @@ class IssueFormatter:
             # Handle both dict and object formats
             if hasattr(failure, "test_name"):
                 # TestFailure object
-                test_name = failure.test_name
+                test_name = strip_ansi_codes(failure.test_name)
                 file_path = get_relative_path(failure.file_path or "")
-                error_message = failure.error_message or "No error message"
+                error_message = strip_ansi_codes(failure.error_message or "No error message")
                 stack_trace = format_stack_trace(failure.stack_trace or "")
                 duration = format_duration(failure.duration or 0)
                 retry_count = failure.retry_count or 0
             else:
                 # Dictionary format
-                test_name = failure.get("test_name", "Unknown Test")
+                test_name = strip_ansi_codes(failure.get("test_name", "Unknown Test"))
                 file_path = get_relative_path(failure.get("file_path", ""))
-                error_message = failure.get("error_message", "No error message")
+                error_message = strip_ansi_codes(failure.get("error_message", "No error message"))
                 stack_trace = format_stack_trace(failure.get("stack_trace", ""))
                 duration = format_duration(failure.get("duration", 0))
                 retry_count = failure.get("retry_count", 0)
