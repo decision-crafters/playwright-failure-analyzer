@@ -208,6 +208,20 @@ visible...
 
 ---
 
+## 📖 **Documentation**
+
+### 📘 **For Developers**
+- **[How It Works](docs/HOW_IT_WORKS.md)** - Complete guide explaining the action, file placement, and AI analysis
+- **[Testing Instructions](docs/TESTING_INSTRUCTIONS.md)** - How to test the action in your repository
+- **[AI Testing Guide](docs/AI_TESTING_GUIDE.md)** - Set up and test AI analysis
+- **[Inputs Reference](docs/INPUTS.md)** - Complete API reference for all inputs
+- **[Outputs Reference](docs/OUTPUTS.md)** - How to use action outputs in workflows
+
+### 🤖 **For AI Assistants**
+- **[AI Assistant Guide](docs/AI_ASSISTANT_GUIDE.md)** - Quick reference for AI assistants helping developers
+
+---
+
 ## 📖 **Examples**
 
 ### Example 1: Basic Workflow
