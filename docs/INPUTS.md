@@ -40,7 +40,7 @@ github-token: ${{ secrets.MY_PAT }}
 
 **Type**: `string`  
 **Required**: No  
-**Default**: `test-results/results.json`
+**Default**: `test-results.json`
 
 Path to the Playwright JSON report file.
 
@@ -64,9 +64,10 @@ report-path: ${{ env.TEST_RESULTS_PATH }}
 ```
 
 **Tips**:
-- Ensure Playwright generates JSON report: `npx playwright test --reporter=json > results.json`
+- Ensure Playwright generates JSON report: `npx playwright test --reporter=json > test-results.json`
 - Path is relative to workspace root
 - File must exist before action runs
+- **Common mistake**: If you redirect output with `> test-results.json`, your `report-path` should be `test-results.json` (NOT `test-results/results.json`)
 
 ---
 

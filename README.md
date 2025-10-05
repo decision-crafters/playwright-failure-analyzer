@@ -98,7 +98,7 @@ Get intelligent insights and suggestions with AI:
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `github-token` | ✅ Yes | N/A | GitHub token with `issues: write` permission |
-| `report-path` | No | `test-results/results.json` | Path to Playwright JSON report |
+| `report-path` | No | `test-results.json` | Path to Playwright JSON report |
 | `max-failures` | No | `3` | Maximum failures to include in issue |
 | `issue-title` | No | `Playwright Test Failures Detected` | Title for created issues |
 | `issue-labels` | No | `bug,playwright,test-failure` | Comma-separated list of labels |

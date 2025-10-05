@@ -234,17 +234,43 @@ class ConfigValidator:
             )
 
         if not os.path.exists(report_path):
+            # Check for common alternative locations to provide helpful guidance
+            common_locations = [
+                "test-results.json",
+                "playwright-report/results.json",
+                "results.json",
+                "test-results/results.json",
+            ]
+            found_alternatives = [loc for loc in common_locations if os.path.exists(loc)]
+
+            suggestions = [
+                "Ensure Playwright tests have run and generated a JSON report",
+                "Run: npx playwright test --reporter=json > test-results.json",
+                f"Then set report-path: '{report_path}' in your workflow",
+            ]
+
+            if found_alternatives:
+                suggestions.insert(
+                    1,
+                    f"Found report at: {found_alternatives[0]} - update your report-path input to match",
+                )
+
+            suggestions.extend(
+                [
+                    "Verify the report path in your workflow matches where Playwright outputs the file",
+                    "Check the workflow logs to see where the report was actually created",
+                ]
+            )
+
             raise ActionError(
                 code=ErrorCodes.FILE_NOT_FOUND,
                 message=f"Playwright report file not found: {report_path}",
                 severity=ErrorSeverity.HIGH,
-                details={"report_path": report_path},
-                suggestions=[
-                    "Ensure Playwright tests have run and generated a JSON report",
-                    "Check the report path configuration",
-                    "Verify the report file wasn't deleted or moved",
-                    "Make sure Playwright is configured to output JSON reports",
-                ],
+                details={
+                    "report_path": report_path,
+                    "found_alternatives": found_alternatives if found_alternatives else None,
+                },
+                suggestions=suggestions,
             )
 
         if not os.access(report_path, os.R_OK):
