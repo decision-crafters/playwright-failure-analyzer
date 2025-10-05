@@ -37,11 +37,7 @@ from utils import (
 )
 
 try:
-    from ai_analysis import (
-        AIAnalysisFormatter,
-        AIAnalysisResult,
-        analyze_failures_with_ai,
-    )
+    from ai_analysis import AIAnalysisFormatter, AIAnalysisResult, analyze_failures_with_ai
 
     AI_ANALYSIS_AVAILABLE = True
 except ImportError:
