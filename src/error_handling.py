@@ -53,8 +53,12 @@ class ErrorCodes:
     INVALID_JSON = "INVALID_JSON"
 
     # Configuration errors
-    MISSING_TOKEN = "MISSING_TOKEN"  # nosec B105  # This is an error code constant, not a password
-    INVALID_TOKEN = "INVALID_TOKEN"  # nosec B105  # This is an error code constant, not a password
+    MISSING_TOKEN = (
+        "MISSING_TOKEN"  # nosec B105  # This is an error code constant, not a password
+    )
+    INVALID_TOKEN = (
+        "INVALID_TOKEN"  # nosec B105  # This is an error code constant, not a password
+    )
     MISSING_REPOSITORY = "MISSING_REPOSITORY"
     INVALID_CONFIG = "INVALID_CONFIG"
 
@@ -154,7 +158,9 @@ def error_handler(handler: ActionErrorHandler):
                     details={
                         "function": func.__name__,
                         "exception_type": type(e).__name__,
-                        "traceback": (traceback.format_exc() if handler.debug_mode else None),
+                        "traceback": (
+                            traceback.format_exc() if handler.debug_mode else None
+                        ),
                     },
                 )
                 handler.handle_error(error)
@@ -186,7 +192,10 @@ class ConfigValidator:
 
         # Basic format validation
         valid_prefixes = ["ghp_", "gho_", "ghu_", "ghs_", "ghr_"]
-        if not any(token.startswith(prefix) for prefix in valid_prefixes) and len(token) != 40:
+        if (
+            not any(token.startswith(prefix) for prefix in valid_prefixes)
+            and len(token) != 40
+        ):
             raise ActionError(
                 code=ErrorCodes.INVALID_TOKEN,
                 message="GitHub token appears to have invalid format",
@@ -292,7 +301,9 @@ class ReportValidator:
     def validate_report_structure(self, report_data: Dict[str, Any]) -> None:
         """Validate that the report has the expected structure."""
         required_fields = ["stats", "suites"]
-        missing_fields = [field for field in required_fields if field not in report_data]
+        missing_fields = [
+            field for field in required_fields if field not in report_data
+        ]
 
         if missing_fields:
             raise ActionError(
@@ -334,7 +345,9 @@ class ReportValidator:
         """Validate that the report contains test results."""
         stats = report_data.get("stats", {})
         total_tests = (
-            stats.get("expected", 0) + stats.get("unexpected", 0) + stats.get("skipped", 0)
+            stats.get("expected", 0)
+            + stats.get("unexpected", 0)
+            + stats.get("skipped", 0)
         )
 
         if total_tests == 0:

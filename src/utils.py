@@ -135,7 +135,9 @@ def validate_github_token(token: str) -> bool:
     # GitHub tokens typically start with specific prefixes
     valid_prefixes = ["ghp_", "gho_", "ghu_", "ghs_", "ghr_"]
 
-    return any(token.startswith(prefix) for prefix in valid_prefixes) or len(token) == 40
+    return (
+        any(token.startswith(prefix) for prefix in valid_prefixes) or len(token) == 40
+    )
 
 
 def set_github_output(name: str, value: str) -> None:

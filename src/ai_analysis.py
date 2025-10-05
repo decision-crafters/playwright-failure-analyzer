@@ -160,7 +160,9 @@ Be concise but thorough. Provide practical, actionable advice."""
             )
 
         if len(failures) > max_failures:
-            prompt_parts.append(f"\n... and {len(failures) - max_failures} more similar failures")
+            prompt_parts.append(
+                f"\n... and {len(failures) - max_failures} more similar failures"
+            )
 
         return "\n".join(prompt_parts)
 
@@ -193,7 +195,9 @@ Be concise but thorough. Provide practical, actionable advice."""
         lines = response_text.strip().split("\n")
 
         # Extract summary (first non-empty line)
-        summary = next((line.strip() for line in lines if line.strip()), "AI analysis completed")
+        summary = next(
+            (line.strip() for line in lines if line.strip()), "AI analysis completed"
+        )
 
         # Look for action items or suggestions
         suggested_actions = []
