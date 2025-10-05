@@ -1,0 +1,140 @@
+# AI Analysis Example
+# Shows different AI provider configurations
+
+name: E2E Tests - with AI Analysis
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight
+
+jobs:
+  # Option 1: OpenRouter (Recommended - Cheapest)
+  test-with-openrouter:
+    name: Tests with OpenRouter AI
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install and test
+        run: |
+          npm ci
+          npx playwright install --with-deps
+          npx playwright test --reporter=json > test-results.json
+        continue-on-error: true
+
+      - name: Analyze with OpenRouter + DeepSeek
+        if: failure()
+        uses: decision-crafters/playwright-failure-analyzer@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          report-path: 'test-results.json'
+          ai-analysis: true
+          issue-title: '🤖 AI-Analyzed Test Failures (DeepSeek)'
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          AI_MODEL: 'openrouter/deepseek/deepseek-chat'
+          # Cost: ~$0.0003 per analysis
+
+  # Option 2: OpenAI GPT-4o-mini
+  test-with-openai:
+    name: Tests with OpenAI
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install and test
+        run: |
+          npm ci
+          npx playwright install --with-deps
+          npx playwright test --reporter=json > test-results.json
+        continue-on-error: true
+
+      - name: Analyze with OpenAI
+        if: failure()
+        uses: decision-crafters/playwright-failure-analyzer@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          report-path: 'test-results.json'
+          ai-analysis: true
+          issue-title: '🤖 AI-Analyzed Test Failures (GPT-4o-mini)'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AI_MODEL: 'gpt-4o-mini'
+          # Cost: ~$0.0003 per analysis
+
+  # Option 3: Anthropic Claude (Premium)
+  test-with-claude:
+    name: Tests with Claude (Premium)
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install and test
+        run: |
+          npm ci
+          npx playwright install --with-deps
+          npx playwright test --reporter=json > test-results.json
+        continue-on-error: true
+
+      - name: Analyze with Claude
+        if: failure()
+        uses: decision-crafters/playwright-failure-analyzer@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          report-path: 'test-results.json'
+          ai-analysis: true
+          issue-title: '🤖 AI-Analyzed Test Failures (Claude 3.5)'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AI_MODEL: 'claude-3-5-sonnet-20240620'
+          # Cost: ~$0.006 per analysis (premium quality)
+
+  # Option 4: Without AI (Fastest, Free)
+  test-without-ai:
+    name: Tests without AI
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install and test
+        run: |
+          npm ci
+          npx playwright install --with-deps
+          npx playwright test --reporter=json > test-results.json
+        continue-on-error: true
+
+      - name: Analyze without AI
+        if: failure()
+        uses: decision-crafters/playwright-failure-analyzer@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          report-path: 'test-results.json'
+          ai-analysis: false  # Disable AI
+          issue-title: 'Test Failures (No AI Analysis)'
+        # No API key needed, fastest execution, no cost

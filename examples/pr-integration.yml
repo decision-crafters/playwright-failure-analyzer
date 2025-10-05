@@ -1,0 +1,82 @@
+# PR Integration Example
+# Shows how to integrate failure analysis with pull requests
+
+name: E2E Tests - PR Integration
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    name: Test and Report on PR
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout PR code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright tests
+        id: playwright
+        run: npx playwright test --reporter=json > test-results.json
+        continue-on-error: true
+
+      - name: Analyze failures and create issue
+        if: failure()
+        id: analyze
+        uses: decision-crafters/playwright-failure-analyzer@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          report-path: 'test-results.json'
+          max-failures: 5
+          issue-title: '🚨 PR #${{ github.event.pull_request.number }} - E2E Test Failures'
+          issue-labels: 'bug,e2e,pr-blocker'
+          deduplicate: false  # Always create new issue for PRs
+
+      - name: Add PR comment with results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const testsPassed = '${{ steps.playwright.outcome }}' === 'success';
+            const issueNumber = '${{ steps.analyze.outputs.issue-number }}';
+            const failureCount = '${{ steps.analyze.outputs.failures-count }}';
+
+            let message = testsPassed
+              ? '✅ All E2E tests passed successfully!'
+              : `❌ E2E tests failed with ${failureCount} failure(s).`;
+
+            if (!testsPassed && issueNumber) {
+              message += `\n\n📋 Detailed failure report: #${issueNumber}`;
+              message += '\n\nPlease fix the failing tests before merging this PR.';
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });
+
+      - name: Update PR status check
+        if: failure()
+        run: |
+          echo "::error::E2E tests failed. See issue #${{ steps.analyze.outputs.issue-number }} for details."
+          exit 1

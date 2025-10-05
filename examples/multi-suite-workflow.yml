@@ -1,0 +1,130 @@
+# Multi-Suite Example
+# Shows how to handle multiple test suites in a single workflow
+
+name: E2E Tests - Multiple Suites
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # Test Suite 1: Chrome Desktop
+  chrome-tests:
+    name: Chrome Desktop Tests
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install chromium
+
+      - name: Run Chrome tests
+        run: npx playwright test --project=chromium --reporter=json > chrome-results.json
+        continue-on-error: true
+
+      - name: Analyze Chrome failures
+        if: failure()
+        uses: decision-crafters/playwright-failure-analyzer@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          report-path: 'chrome-results.json'
+          issue-title: '🌐 Chrome Desktop Test Failures'
+          issue-labels: 'bug,e2e,browser-chrome'
+
+  # Test Suite 2: Firefox
+  firefox-tests:
+    name: Firefox Tests
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install firefox
+
+      - name: Run Firefox tests
+        run: npx playwright test --project=firefox --reporter=json > firefox-results.json
+        continue-on-error: true
+
+      - name: Analyze Firefox failures
+        if: failure()
+        uses: decision-crafters/playwright-failure-analyzer@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          report-path: 'firefox-results.json'
+          issue-title: '🦊 Firefox Test Failures'
+          issue-labels: 'bug,e2e,browser-firefox'
+
+  # Test Suite 3: Mobile (Webkit)
+  mobile-tests:
+    name: Mobile Tests
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install webkit
+
+      - name: Run mobile tests
+        run: npx playwright test --project=webkit --reporter=json > mobile-results.json
+        continue-on-error: true
+
+      - name: Analyze mobile failures
+        if: failure()
+        uses: decision-crafters/playwright-failure-analyzer@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          report-path: 'mobile-results.json'
+          issue-title: '📱 Mobile (WebKit) Test Failures'
+          issue-labels: 'bug,e2e,mobile,browser-webkit'
+
+  # Combined Summary
+  test-summary:
+    name: Test Summary
+    needs: [chrome-tests, firefox-tests, mobile-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - name: Check test results
+        run: |
+          echo "Chrome: ${{ needs.chrome-tests.result }}"
+          echo "Firefox: ${{ needs.firefox-tests.result }}"
+          echo "Mobile: ${{ needs.mobile-tests.result }}"
+
+          if [ "${{ needs.chrome-tests.result }}" != "success" ] || \
+             [ "${{ needs.firefox-tests.result }}" != "success" ] || \
+             [ "${{ needs.mobile-tests.result }}" != "success" ]; then
+            echo "::warning::Some test suites failed. Check the individual job results."
+          else
+            echo "✅ All test suites passed!"
+          fi
