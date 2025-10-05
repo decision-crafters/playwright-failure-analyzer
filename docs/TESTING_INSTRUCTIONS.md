@@ -54,6 +54,8 @@ jobs:
         id: tests
         run: npx playwright test --reporter=json > test-results.json
         continue-on-error: true  # Important: don't fail on test failures
+        # Note: Playwright automatically finds tests based on your playwright.config.js
+        # If you don't have a config, it searches for *.spec.js and *.test.js files
 
       - name: Analyze failures with the action
         if: always()  # Run even if tests pass
@@ -290,6 +292,76 @@ at tests/example.spec.js:10:18
 
 **File:** `tests/example.spec.js:14`
 ...
+```
+
+---
+
+## ❓ Frequently Asked Questions
+
+### Q: Do I need to specify where my Playwright test files are located?
+
+**A: No!** Playwright automatically discovers test files based on your configuration.
+
+**How it works:**
+1. Playwright reads your `playwright.config.js` (or `.ts`)
+2. Uses the `testDir` setting (default: `./tests`)
+3. Finds files matching `*.spec.js`, `*.test.js`, etc.
+
+**In your workflow, this just works:**
+```yaml
+- run: npx playwright test --reporter=json > test-results.json
+```
+
+**Only specify the directory if:**
+- You have no config file
+- You want to run a subset of tests
+- You have a non-standard setup
+
+**Example with custom directory:**
+```yaml
+- run: npx playwright test e2e/ --reporter=json > test-results.json
+```
+
+### Q: What if my tests are in a custom location?
+
+**A: Playwright will still find them if configured properly.**
+
+**Option 1:** Update your `playwright.config.js`:
+```javascript
+module.exports = {
+  testDir: './my-custom-tests',  // Point to your test directory
+  // ...
+};
+```
+
+**Option 2:** Specify in the workflow:
+```yaml
+- run: npx playwright test my-custom-tests/ --reporter=json > test-results.json
+```
+
+### Q: What's the difference between test location and report path?
+
+**A: Two different things!**
+
+- **Test location**: Where Playwright **finds** your `*.spec.js` files
+  - Configured in `playwright.config.js`
+  - Automatic discovery
+  - You usually don't specify this in the workflow
+
+- **Report path**: Where the JSON **report is saved**
+  - You control this with `> test-results.json`
+  - This is what you pass to the action's `report-path` input
+
+**Example:**
+```yaml
+# Playwright finds tests automatically via config
+# Report saved to 'test-results.json' (your choice)
+- run: npx playwright test --reporter=json > test-results.json
+
+# Action reads the report from where you saved it
+- uses: decision-crafters/playwright-failure-analyzer@main
+  with:
+    report-path: 'test-results.json'  # Must match above!
 ```
 
 ---
