@@ -12,8 +12,8 @@ import unittest
 # Add src directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from error_handling import ErrorCodes, setup_error_handling
-from parse_report import PlaywrightReportParser
+from error_handling import ErrorCodes, setup_error_handling  # noqa: E402
+from parse_report import PlaywrightReportParser  # noqa: E402
 
 try:
     from error_handling import ActionError

@@ -11,8 +11,8 @@ from unittest.mock import Mock, patch
 # Add src directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from create_issue import GitHubAPIClient, IssueFormatter, IssueManager
-from error_handling import ErrorCodes, setup_error_handling
+from create_issue import GitHubAPIClient, IssueFormatter, IssueManager  # noqa: E402
+from error_handling import ErrorCodes, setup_error_handling  # noqa: E402
 
 try:
     from error_handling import ActionError

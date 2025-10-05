@@ -11,7 +11,7 @@ from unittest.mock import mock_open, patch
 # Add src directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from utils import (
+from utils import (  # noqa: E402
     extract_file_name,
     format_duration,
     format_stack_trace,

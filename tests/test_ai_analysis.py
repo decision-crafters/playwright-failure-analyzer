@@ -12,7 +12,7 @@ from unittest.mock import Mock, patch
 # Add src directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from ai_analysis import (
+from ai_analysis import (  # noqa: E402
     AIAnalysisFormatter,
     AIAnalysisResult,
     AIAnalyzer,
