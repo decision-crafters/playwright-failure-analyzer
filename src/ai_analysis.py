@@ -30,7 +30,7 @@ class AIAnalysisResult:
 class AIAnalyzer:
     """AI-powered analyzer for test failures using LiteLLM."""
 
-    def __init__(self, model: str = "gpt-4.1-mini", max_tokens: int = 1000):
+    def __init__(self, model: str = "gpt-4o-mini", max_tokens: int = 1000):
         """
         Initialize the AI analyzer.
 
@@ -290,7 +290,7 @@ def create_ai_analyzer(model: str = None) -> Optional[AIAnalyzer]:
 
     # Use provided model or default
     if not model:
-        model = os.getenv("AI_MODEL", "gpt-4.1-mini")
+        model = os.getenv("AI_MODEL", "gpt-4o-mini")
 
     try:
         return AIAnalyzer(model=model)
