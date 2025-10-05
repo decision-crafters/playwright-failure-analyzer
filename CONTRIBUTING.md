@@ -52,18 +52,20 @@ We recommend using one of these development environments:
 
 2. **Set up Python environment**
    ```bash
-   # Create virtual environment
-   python -m venv venv
+   # Create virtual environment (Python 3.11+ recommended)
+   python3.11 -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-   # Install dependencies
-   pip install -r requirements.txt
-   pip install -r requirements-dev.txt  # Development dependencies
-   ```
+   # Install all dependencies (production + development)
+   pip install --upgrade pip
+   pip install -r requirements-dev.txt
 
-3. **Install development tools**
-   ```bash
-   pip install flake8 mypy pytest pytest-cov black isort
+   # This installs:
+   # - Production dependencies (requests, litellm, openai)
+   # - Code quality tools (black, isort, flake8, mypy)
+   # - Security tools (bandit, detect-secrets)
+   # - Testing tools (pytest, pytest-cov)
+   # - Pre-commit hooks
    ```
 
 4. **Install pre-commit hooks** (Security required!)
