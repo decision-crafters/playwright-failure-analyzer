@@ -13,6 +13,13 @@ NC='\033[0m'
 
 echo -e "${BLUE}🤖 AI Integration Testing Script${NC}\n"
 
+# Load .env file if it exists
+if [ -f .env ]; then
+    echo -e "${GREEN}📄 Loading environment variables from .env${NC}"
+    export $(grep -v '^#' .env | xargs)
+    echo ""
+fi
+
 # Check for API keys
 if [ -z "$OPENAI_API_KEY" ] && [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$OPENROUTER_API_KEY" ]; then
     echo -e "${RED}❌ Error: No API key found!${NC}"
@@ -97,7 +104,14 @@ echo ""
 echo -e "${BLUE}🧠 Running AI analysis...${NC}"
 echo ""
 
-python3 << PYTHON_SCRIPT
+# Use venv python if available, otherwise system python
+if [ -f .venv/bin/python ]; then
+    PYTHON_CMD=".venv/bin/python"
+else
+    PYTHON_CMD="python3"
+fi
+
+$PYTHON_CMD << PYTHON_SCRIPT
 import sys
 import os
 import json

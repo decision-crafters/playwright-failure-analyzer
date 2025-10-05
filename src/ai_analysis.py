@@ -285,7 +285,14 @@ def create_ai_analyzer(model: str = None) -> Optional[AIAnalyzer]:
         AIAnalyzer instance or None if not configured
     """
     # Check if AI analysis is enabled and configured
-    if not os.getenv("OPENAI_API_KEY") and not os.getenv("ANTHROPIC_API_KEY"):
+    # OpenRouter, DeepSeek, and other providers supported via LiteLLM
+    has_key = (
+        os.getenv("OPENAI_API_KEY")
+        or os.getenv("ANTHROPIC_API_KEY")
+        or os.getenv("OPENROUTER_API_KEY")
+        or os.getenv("DEEPSEEK_API_KEY")
+    )
+    if not has_key:
         return None
 
     # Use provided model or default
