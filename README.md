@@ -13,7 +13,12 @@ An intelligent GitHub Action that automatically analyzes Playwright test failure
 
 ## ✨ **Key Features**
 
-- 🤖 **AI-Powered Analysis** - Optional intelligent root cause analysis using OpenAI, Anthropic, OpenRouter, or DeepSeek
+- 🤖 **AI-Powered Analysis (v1.1.0+)** - Actionable insights with priority ranking, effort estimates, and specific fix recommendations
+  - 🎯 Priority Assessment (Critical/High/Medium/Low)
+  - ⚡ Quick Wins (fixes under 10 minutes)
+  - 🔧 Specific Fix Recommendations with file:line references
+  - 📊 Failure Categories (test/app/infrastructure/flaky)
+  - 💡 Test Quality Improvements
 - 📊 **Smart Failure Bundling** - Groups multiple failures into a single, organized issue
 - 🎯 **Configurable Limits** - Control how many failures to include
 - 🔄 **Deduplication** - Prevents duplicate issues for the same failures
@@ -75,7 +80,7 @@ jobs:
 
       - name: Analyze test failures
         if: steps.playwright-tests.outputs.test-failed == 'true'  # Custom failure detection
-        uses: decision-crafters/playwright-failure-analyzer@v1  # or @v1.0.0 for locked version
+        uses: decision-crafters/playwright-failure-analyzer@v1  # or @v1.1.0 for locked version
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           # Uses default report-path: playwright-report/results.json
@@ -83,9 +88,19 @@ jobs:
           issue-labels: 'bug,playwright,automated'
 ```
 
-### With AI Analysis (Recommended)
+### With AI Analysis (Recommended) 🤖
 
-Get intelligent insights and suggestions with AI:
+Get **actionable insights** that help your team know exactly what to work on:
+
+**What You Get (v1.1.0+)**:
+- 🎯 **Priority ranking** - Critical/High/Medium/Low classification
+- 📋 **Work order** - What to fix first for maximum efficiency
+- ⚡ **Quick wins** - Identify fixes under 10 minutes
+- 🔧 **Specific fixes** - File:line with code suggestions and effort estimates
+- 📊 **Failure categories** - Test/App/Infrastructure/Flaky grouping
+- 💡 **Quality feedback** - Long-term test improvement suggestions
+
+[See real example output →](examples/ENHANCED_AI_OUTPUT.md)
 
 ```yaml
       # Configure JSON reporter in playwright.config.js:
@@ -101,7 +116,7 @@ Get intelligent insights and suggestions with AI:
 
       - name: Analyze test failures with AI
         if: steps.playwright-tests.outputs.test-failed == 'true'
-        uses: decision-crafters/playwright-failure-analyzer@v1  # Stable release
+        uses: decision-crafters/playwright-failure-analyzer@v1.1.0  # Enhanced AI features
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           # Uses default report-path: playwright-report/results.json
