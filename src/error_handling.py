@@ -69,6 +69,8 @@ class ErrorCodes:
     INVALID_REPORT_FORMAT = "INVALID_REPORT_FORMAT"
     NO_TEST_RESULTS = "NO_TEST_RESULTS"
     CORRUPTED_REPORT = "CORRUPTED_REPORT"
+    INVALID_REPORT_DATA = "INVALID_REPORT_DATA"
+    NOT_PLAYWRIGHT_REPORT = "NOT_PLAYWRIGHT_REPORT"
 
     # General errors
     UNEXPECTED_ERROR = "UNEXPECTED_ERROR"
@@ -372,6 +374,80 @@ class ReportValidator:
                     "Ensure tests were actually executed",
                     "Check that test files are being discovered by Playwright",
                     "Verify the test configuration is correct",
+                ],
+            )
+
+    def validate_playwright_schema(self, report_data: Dict[str, Any]) -> None:
+        """Validate that report matches Playwright JSON reporter schema.
+
+        This provides enhanced validation to detect non-Playwright JSON files
+        and provide helpful error messages with configuration guidance.
+        """
+        # Check for Playwright-specific structure
+        playwright_indicators = {
+            "suites": (list, "Test suites array"),
+            "config": (dict, "Playwright configuration"),
+        }
+
+        missing_indicators = []
+        invalid_types = []
+
+        for field, (expected_type, description) in playwright_indicators.items():
+            if field not in report_data:
+                missing_indicators.append(f"{field} ({description})")
+            elif not isinstance(report_data[field], expected_type):
+                invalid_types.append(
+                    f"{field} (expected {expected_type.__name__}, got {type(report_data[field]).__name__})"
+                )
+
+        if missing_indicators or invalid_types:
+            error_details = []
+            if missing_indicators:
+                error_details.append(f"Missing fields: {', '.join(missing_indicators)}")
+            if invalid_types:
+                error_details.append(f"Invalid types: {', '.join(invalid_types)}")
+
+            suggestions = [
+                "Ensure you're using Playwright's JSON reporter, not another test framework",
+                "Configure Playwright reporter in playwright.config.js:",
+                "  reporter: [['json', { outputFile: 'playwright-report/results.json' }]]",
+                "Or use command line: npx playwright test --reporter=json",
+            ]
+
+            # Check if this might be from another framework
+            if "jest" in str(report_data).lower():
+                suggestions.insert(0, "⚠️  This appears to be a Jest report, not Playwright")
+            elif "mocha" in str(report_data).lower():
+                suggestions.insert(0, "⚠️  This appears to be a Mocha report, not Playwright")
+            elif "cypress" in str(report_data).lower():
+                suggestions.insert(0, "⚠️  This appears to be a Cypress report, not Playwright")
+
+            raise ActionError(
+                code=ErrorCodes.NOT_PLAYWRIGHT_REPORT,
+                message=f"Report does not match Playwright JSON format. {' '.join(error_details)}",
+                severity=ErrorSeverity.HIGH,
+                details={
+                    "missing_fields": missing_indicators,
+                    "invalid_types": invalid_types,
+                    "available_fields": list(report_data.keys()),
+                },
+                suggestions=suggestions,
+            )
+
+        # Validate config structure contains Playwright-specific fields
+        config = report_data.get("config", {})
+        if config and not any(
+            key in config for key in ["version", "projects", "rootDir", "testDir"]
+        ):
+            raise ActionError(
+                code=ErrorCodes.INVALID_REPORT_DATA,
+                message="Report 'config' section missing Playwright-specific fields",
+                severity=ErrorSeverity.HIGH,
+                details={"available_config_fields": list(config.keys())},
+                suggestions=[
+                    "The JSON structure doesn't match Playwright's format",
+                    "Ensure Playwright version is 1.30.0 or higher",
+                    "Regenerate the report with: npx playwright test --reporter=json",
                 ],
             )
 

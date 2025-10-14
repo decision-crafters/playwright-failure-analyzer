@@ -1,10 +1,63 @@
 # 🧪 Testing the Playwright Failure Analyzer
 
-This guide shows you how to test the action in your own repository.
+This guide shows you how to test the action in your own repository or use our public demo repository.
 
 ---
 
-## Prerequisites
+## Quick Start: Demo Repository (Recommended)
+
+**The fastest way to see the action in action!**
+
+### Option A: View Live Demos
+
+Visit our public demo repository to see real examples:
+
+**🔗 [playwright-failure-analyzer-demo](https://github.com/decision-crafters/playwright-failure-analyzer-demo)**
+
+- ✅ Live workflows running the action
+- ✅ Example issues created by the action
+- ✅ Multiple test scenarios (failures, passing tests, flaky tests)
+- ✅ Ready-to-use Playwright configuration
+
+**See it working**:
+1. Check the [Actions tab](https://github.com/decision-crafters/playwright-failure-analyzer-demo/actions) for recent runs
+2. View [demo issues](https://github.com/decision-crafters/playwright-failure-analyzer-demo/issues?q=label%3Ademo) created automatically
+3. Review workflow configurations in `.github/workflows/`
+
+### Option B: Fork and Test
+
+**Test the action in your own environment:**
+
+1. **Fork the demo repository**:
+   ```bash
+   # Using GitHub CLI
+   gh repo fork decision-crafters/playwright-failure-analyzer-demo
+
+   # Or fork via web interface:
+   # https://github.com/decision-crafters/playwright-failure-analyzer-demo/fork
+   ```
+
+2. **Enable GitHub Actions** in your fork:
+   - Go to Actions tab
+   - Click "I understand my workflows, go ahead and enable them"
+
+3. **Run a workflow manually**:
+   - Go to Actions → "Test with Intentional Failures"
+   - Click "Run workflow"
+   - Select branch: `main`
+   - Click "Run workflow"
+
+4. **Watch the magic happen**:
+   - Workflow runs tests (which intentionally fail)
+   - Action analyzes failures
+   - Issue is created automatically
+   - Check your Issues tab!
+
+**Confidence**: 98% - This is the most reliable way to validate the action.
+
+---
+
+## Prerequisites (For Custom Testing)
 
 1. A GitHub repository (public or private)
 2. Playwright tests installed in your repository

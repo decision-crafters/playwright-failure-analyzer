@@ -12,7 +12,7 @@ inputs:
   report-path:
     description: 'Path to the Playwright JSON report file'
     required: false
-    default: 'test-results.json'
+    default: 'playwright-report/results.json'
   max-failures:
     description: 'Maximum number of failures before halting and creating an issue'
     required: false

@@ -110,6 +110,7 @@ class PlaywrightReportParser:
 
         # Validate report structure
         self.validator.validate_report_structure(self.report_data)
+        self.validator.validate_playwright_schema(self.report_data)
         self.validator.validate_has_test_results(self.report_data)
 
         # Extract basic statistics

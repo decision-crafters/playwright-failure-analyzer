@@ -1,5 +1,11 @@
 # Advanced Workflow Example
-# Shows all available configuration options
+# Shows advanced features like custom labels, assignees, and detailed configuration
+#
+# Prerequisites:
+# Configure Playwright to output JSON reports in playwright.config.js:
+# reporter: [['json', { outputFile: 'playwright-report/results.json' }]]
+#
+# See examples/playwright-reporters.md for complete configuration guide
 
 name: E2E Tests - Advanced
 
@@ -37,21 +43,36 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
+      # Playwright config should have: reporter: [['json', { outputFile: 'playwright-report/results.json' }]]
       - name: Run Playwright tests
-        run: npx playwright test --reporter=json > test-results.json
+        id: playwright-tests
+        run: |
+          set +e  # Disable exit on error to capture test exit code
+          npx playwright test
+          TEST_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+
+          # Set output for reliable failure detection
+          if [ $TEST_EXIT_CODE -ne 0 ]; then
+            echo "test-failed=true" >> $GITHUB_OUTPUT
+          else
+            echo "test-failed=false" >> $GITHUB_OUTPUT
+          fi
+
+          exit $TEST_EXIT_CODE
         continue-on-error: true
         env:
           CI: true
 
       - name: Analyze test failures with full configuration
-        if: failure()
+        if: steps.playwright-tests.outputs.test-failed == 'true'  # Custom failure detection
         uses: decision-crafters/playwright-failure-analyzer@v1
         with:
           # Required
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
           # Report configuration
-          report-path: 'test-results.json'
+          # report-path uses default: playwright-report/results.json
           max-failures: 10  # Include up to 10 failures
 
           # Issue configuration
@@ -73,7 +94,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: test-results.json
+          path: playwright-report/
           retention-days: 30
 
       - name: Comment on PR

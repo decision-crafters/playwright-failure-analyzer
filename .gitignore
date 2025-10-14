@@ -73,3 +73,6 @@ bandit-report.json
 
 # Build artifacts
 release-package/
+
+# Temporary demo repository (do not commit)
+temp-demo-repo/

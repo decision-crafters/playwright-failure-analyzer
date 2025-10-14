@@ -1,5 +1,11 @@
 # Basic Workflow Example
 # This is the simplest way to use the Playwright Failure Analyzer
+#
+# Prerequisites:
+# 1. Configure Playwright to output JSON reports in playwright.config.js:
+#    reporter: [['json', { outputFile: 'playwright-report/results.json' }]]
+#
+# See examples/playwright-reporters.md for complete configuration guide
 
 name: E2E Tests - Basic
 
@@ -32,13 +38,30 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      # RECOMMENDED: Configure JSON reporter in playwright.config.js
+      # This allows running tests with simple 'npx playwright test'
       - name: Run Playwright tests
-        run: npx playwright test --reporter=json > test-results.json
+        id: playwright-tests
+        run: |
+          set +e  # Disable exit on error to capture test exit code
+          npx playwright test
+          TEST_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+
+          # Set output for reliable failure detection
+          if [ $TEST_EXIT_CODE -ne 0 ]; then
+            echo "test-failed=true" >> $GITHUB_OUTPUT
+          else
+            echo "test-failed=false" >> $GITHUB_OUTPUT
+          fi
+
+          exit $TEST_EXIT_CODE
         continue-on-error: true  # Don't fail workflow on test failures
 
       - name: Analyze test failures
-        if: failure()  # Only run if tests failed
+        if: steps.playwright-tests.outputs.test-failed == 'true'  # Custom failure detection
         uses: decision-crafters/playwright-failure-analyzer@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          report-path: 'test-results.json'
+          # report-path uses default: playwright-report/results.json
+          # Matches output from playwright.config.js reporter configuration

@@ -55,16 +55,30 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
 
+      # Configure JSON reporter in playwright.config.js:
+      # reporter: [['json', { outputFile: 'playwright-report/results.json' }]]
       - name: Run Playwright tests
-        run: npx playwright test --reporter=json > test-results.json
+        id: playwright-tests
+        run: |
+          npx playwright test
+          TEST_EXIT_CODE=$?
+
+          # Set output for reliable failure detection
+          if [ $TEST_EXIT_CODE -ne 0 ]; then
+            echo "test-failed=true" >> $GITHUB_OUTPUT
+          else
+            echo "test-failed=false" >> $GITHUB_OUTPUT
+          fi
+
+          exit $TEST_EXIT_CODE
         continue-on-error: true  # Don't fail the job on test failures
 
       - name: Analyze test failures
-        if: failure()  # Only run if tests failed
+        if: steps.playwright-tests.outputs.test-failed == 'true'  # Custom failure detection
         uses: decision-crafters/playwright-failure-analyzer@v1  # or @v1.0.0 for locked version
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          report-path: 'test-results.json'
+          # Uses default report-path: playwright-report/results.json
           max-failures: 5
           issue-labels: 'bug,playwright,automated'
 ```
@@ -74,12 +88,23 @@ jobs:
 Get intelligent insights and suggestions with AI:
 
 ```yaml
+      # Configure JSON reporter in playwright.config.js:
+      # reporter: [['json', { outputFile: 'playwright-report/results.json' }]]
+      - name: Run Playwright tests
+        id: playwright-tests
+        run: |
+          npx playwright test
+          TEST_EXIT_CODE=$?
+          echo "test-failed=$([ $TEST_EXIT_CODE -ne 0 ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          exit $TEST_EXIT_CODE
+        continue-on-error: true
+
       - name: Analyze test failures with AI
-        if: failure()
+        if: steps.playwright-tests.outputs.test-failed == 'true'
         uses: decision-crafters/playwright-failure-analyzer@v1  # Stable release
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          report-path: 'test-results.json'
+          # Uses default report-path: playwright-report/results.json
           max-failures: 5
           issue-labels: 'bug,playwright,automated'
           ai-analysis: true  # Enable AI analysis
@@ -98,7 +123,7 @@ Get intelligent insights and suggestions with AI:
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `github-token` | ✅ Yes | N/A | GitHub token with `issues: write` permission |
-| `report-path` | No | `test-results.json` | Path to Playwright JSON report |
+| `report-path` | No | `playwright-report/results.json` | Path to Playwright JSON report |
 | `max-failures` | No | `3` | Maximum failures to include in issue |
 | `issue-title` | No | `Playwright Test Failures Detected` | Title for created issues |
 | `issue-labels` | No | `bug,playwright,test-failure` | Comma-separated list of labels |
@@ -214,6 +239,7 @@ visible...
 - **[How It Works](docs/HOW_IT_WORKS.md)** - Complete guide explaining the action, file placement, and AI analysis
 - **[Testing Instructions](docs/TESTING_INSTRUCTIONS.md)** - How to test the action in your repository
 - **[AI Testing Guide](docs/AI_TESTING_GUIDE.md)** - Set up and test AI analysis
+- **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)** - ⭐ **Solutions for common issues and best practices**
 - **[Inputs Reference](docs/INPUTS.md)** - Complete API reference for all inputs
 - **[Outputs Reference](docs/OUTPUTS.md)** - How to use action outputs in workflows
 
@@ -263,12 +289,33 @@ The issue includes:
 
 ## 🛠️ **Troubleshooting**
 
-### Common Issues
+> ⚠️ **Important**: If using `continue-on-error: true`, you MUST use custom failure detection instead of `if: failure()`. See the [Troubleshooting Guide](docs/TROUBLESHOOTING.md) for details.
+
+### Quick Fixes
+
+**Issue**: "Analyzer not running despite test failures"
+```yaml
+# ✅ SOLUTION: Use custom failure detection
+- name: Run tests
+  id: tests
+  run: |
+    npx playwright test --reporter=json > test-results.json 2>&1
+    TEST_EXIT_CODE=$?
+    echo "test-failed=$([ $TEST_EXIT_CODE -ne 0 ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+    exit $TEST_EXIT_CODE
+  continue-on-error: true
+
+- name: Analyze
+  if: steps.tests.outputs.test-failed == 'true'  # Not 'if: failure()'
+  uses: decision-crafters/playwright-failure-analyzer@v1
+```
 
 **Issue**: "No test report found"
 ```
-Solution: Ensure Playwright generates a JSON report:
-npx playwright test --reporter=json > test-results.json
+Solution: Configure Playwright to generate JSON report in playwright.config.js:
+reporter: [['json', { outputFile: 'playwright-report/results.json' }]]
+
+See examples/playwright-reporters.md for complete setup guide
 ```
 
 **Issue**: "Permission denied when creating issue"
@@ -284,24 +331,18 @@ Solution: Ensure you've set the API key in GitHub Secrets and
 enabled ai-analysis: true in your workflow
 ```
 
-**Issue**: "Duplicate issues being created"
-```
-Solution: Enable deduplication (it's on by default):
-deduplicate: true
-```
+### Complete Troubleshooting Guide
 
-### Debugging
+For comprehensive solutions, debugging techniques, and best practices, see:
 
-Enable debug logging in your workflow:
+📖 **[Complete Troubleshooting Guide](docs/TROUBLESHOOTING.md)**
 
-```yaml
-- name: Analyze failures
-  uses: decision-crafters/playwright-failure-analyzer@v1
-  with:
-    github-token: ${{ secrets.GITHUB_TOKEN }}
-  env:
-    ACTIONS_STEP_DEBUG: true  # Enable debug logs
-```
+Includes:
+- ✅ Detailed explanations of common issues
+- ✅ Step-by-step solutions with examples
+- ✅ Debugging commands and techniques
+- ✅ Best practices and anti-patterns
+- ✅ Alternative approaches
 
 ---
 

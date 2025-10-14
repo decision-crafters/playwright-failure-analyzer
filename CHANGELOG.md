@@ -12,10 +12,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Full AI integration testing guide
 - Support for OpenRouter and DeepSeek AI providers
 - `.env.example` template for configuration
+- **CRITICAL: Troubleshooting Guide** (`docs/TROUBLESHOOTING.md`) documenting `continue-on-error` issue and solutions
+- **Enhanced Playwright Report Validation** - Added schema validation to detect non-Playwright JSON files
+  - Validates report structure matches Playwright JSON format
+  - Detects Jest, Mocha, Cypress reports and provides helpful error messages
+  - Suggests proper Playwright reporter configuration
+- **Playwright Reporter Configuration Guide** (`examples/playwright-reporters.md`)
+  - Complete guide to configuring Playwright JSON reporter
+  - Examples for config file, CLI, and multiple reporters
+  - Troubleshooting common reporter issues
 
 ### Changed
 - README.md completely rewritten for marketplace readiness
 - Updated all repository URLs from placeholders to actual organization
+- **BREAKING CHANGE**: Default `report-path` changed from `test-results.json` to `playwright-report/results.json`
+  - **Reason**: Aligns with Playwright's standard output location when using config file
+  - **Migration**: Either:
+    1. Use Playwright config file with standard path (recommended):
+       ```javascript
+       // playwright.config.js
+       reporter: [['json', { outputFile: 'playwright-report/results.json' }]]
+       ```
+    2. Or explicitly set `report-path` in your workflow:
+       ```yaml
+       with:
+         report-path: 'test-results.json'  # Keep old path
+       ```
+  - **Impact**: Workflows not specifying `report-path` will need to update Playwright configuration
+  - See `examples/playwright-reporters.md` for detailed migration guide
+- Enhanced error messages with Playwright-specific configuration suggestions
+- Updated `docs/CONFIGURATION.md` with Playwright reporter examples
+
+### Fixed
+- **CRITICAL BUG**: Fixed all documentation examples using incorrect `if: failure()` condition with `continue-on-error: true`
+  - Issue: `if: failure()` doesn't trigger when `continue-on-error: true` is set (step marked as "success" despite exit code 1)
+  - Solution: Implemented custom failure detection using step outputs in all examples
+  - Affected files:
+    - `README.md` - Quick Start examples
+    - `examples/basic-workflow.yml`
+    - `examples/advanced-workflow.yml`
+    - `examples/ai-analysis-workflow.yml` (all 4 jobs)
+    - `examples/multi-suite-workflow.yml` (all 3 test jobs)
+    - `examples/pr-integration.yml`
+  - New pattern: Use `TEST_EXIT_CODE=$?` with `echo "test-failed=..." >> $GITHUB_OUTPUT`
+  - Condition: `if: steps.playwright-tests.outputs.test-failed == 'true'`
+  - See `docs/TROUBLESHOOTING.md` for complete explanation and best practices
 
 ## [1.0.0] - 2025-10-05
 

@@ -177,6 +177,7 @@ class TestPlaywrightReportParser(unittest.TestCase):
         empty_report = {
             "stats": {"expected": 0, "unexpected": 0, "skipped": 0, "duration": 0},
             "suites": [],
+            "config": {"version": "1.40.0"},  # Must have config for Playwright schema validation
         }
         report_path = self.create_temp_report(empty_report)
         parser = PlaywrightReportParser(report_path, self.error_handler)
@@ -222,6 +223,7 @@ class TestPlaywrightReportParser(unittest.TestCase):
                     ],
                 }
             ],
+            "config": {"version": "1.40.0"},
         }
 
         report_path = self.create_temp_report(nested_report)
@@ -258,6 +260,7 @@ class TestPlaywrightReportParser(unittest.TestCase):
                     ],
                 }
             ],
+            "config": {"version": "1.40.0"},
         }
 
         report_path = self.create_temp_report(malformed_report)
@@ -270,6 +273,89 @@ class TestPlaywrightReportParser(unittest.TestCase):
         self.assertEqual(len(summary.failures), 1)
         failure = summary.failures[0]
         self.assertIn("Unknown", failure.test_name)
+
+    def test_playwright_schema_validation_missing_config(self):
+        """Test validation detects missing Playwright config field."""
+        invalid_report = {
+            "stats": {"expected": 1, "unexpected": 0, "skipped": 0, "duration": 1000},
+            "suites": [],
+            # Missing 'config' field
+        }
+        report_path = self.create_temp_report(invalid_report)
+        parser = PlaywrightReportParser(report_path, self.error_handler)
+
+        with self.assertRaises(ActionError) as context:
+            parser.parse_failures()
+
+        self.assertEqual(context.exception.code, ErrorCodes.NOT_PLAYWRIGHT_REPORT)
+        self.assertIn("config", context.exception.message.lower())
+
+    def test_playwright_schema_validation_invalid_type(self):
+        """Test validation detects invalid field types."""
+        invalid_report = {
+            "stats": {"expected": 1, "unexpected": 0, "skipped": 0, "duration": 1000},
+            "suites": "not_a_list",  # Should be a list
+            "config": {"version": "1.40.0"},
+        }
+        report_path = self.create_temp_report(invalid_report)
+        parser = PlaywrightReportParser(report_path, self.error_handler)
+
+        with self.assertRaises(ActionError) as context:
+            parser.parse_failures()
+
+        # Should be caught by validate_report_structure first
+        self.assertEqual(context.exception.code, ErrorCodes.CORRUPTED_REPORT)
+
+    def test_playwright_schema_validation_jest_report(self):
+        """Test validation detects Jest reports and provides helpful message."""
+        jest_report = {
+            "numTotalTests": 10,
+            "numPassedTests": 8,
+            "numFailedTests": 2,
+            "testResults": [],
+            "jest_version": "29.0.0",
+        }
+        report_path = self.create_temp_report(jest_report)
+        parser = PlaywrightReportParser(report_path, self.error_handler)
+
+        with self.assertRaises(ActionError) as context:
+            parser.parse_failures()
+
+        self.assertEqual(context.exception.code, ErrorCodes.INVALID_REPORT_FORMAT)
+
+    def test_playwright_schema_validation_empty_config(self):
+        """Test validation detects config without Playwright-specific fields."""
+        invalid_report = {
+            "stats": {"expected": 1, "unexpected": 0, "skipped": 0, "duration": 1000},
+            "suites": [],
+            "config": {"customField": "value"},  # Missing Playwright-specific fields
+        }
+        report_path = self.create_temp_report(invalid_report)
+        parser = PlaywrightReportParser(report_path, self.error_handler)
+
+        with self.assertRaises(ActionError) as context:
+            parser.parse_failures()
+
+        self.assertEqual(context.exception.code, ErrorCodes.INVALID_REPORT_DATA)
+        self.assertIn("Playwright-specific fields", context.exception.message)
+
+    def test_playwright_schema_validation_valid_report(self):
+        """Test validation passes for properly formatted Playwright report."""
+        valid_report = {
+            "stats": {"expected": 1, "unexpected": 0, "skipped": 0, "duration": 1000},
+            "suites": [],
+            "config": {
+                "version": "1.40.0",
+                "projects": [{"name": "chromium"}],
+                "testDir": "tests",
+            },
+        }
+        report_path = self.create_temp_report(valid_report)
+        parser = PlaywrightReportParser(report_path, self.error_handler)
+
+        # Should not raise any exception
+        summary = parser.parse_failures()
+        self.assertIsNotNone(summary)
 
 
 if __name__ == "__main__":

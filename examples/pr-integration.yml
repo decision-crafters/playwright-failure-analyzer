@@ -35,11 +35,17 @@ jobs:
 
       - name: Run Playwright tests
         id: playwright
-        run: npx playwright test --reporter=json > test-results.json
+        run: |
+          set +e  # Disable exit on error to capture test exit code
+          npx playwright test --reporter=json > test-results.json 2>&1
+          TEST_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+          echo "test-failed=$([ $TEST_EXIT_CODE -ne 0 ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          exit $TEST_EXIT_CODE
         continue-on-error: true
 
       - name: Analyze failures and create issue
-        if: failure()
+        if: steps.playwright.outputs.test-failed == 'true'
         id: analyze
         uses: decision-crafters/playwright-failure-analyzer@v1
         with:

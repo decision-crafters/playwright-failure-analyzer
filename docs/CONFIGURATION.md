@@ -48,10 +48,22 @@ The minimal configuration requires only a GitHub token:
 
 Specifies the location of the Playwright JSON report file. The path is relative to the workspace root.
 
+**Default:** `playwright-report/results.json`
+
 **Common patterns:**
-- Default Playwright output: `test-results/results.json`
-- Custom output directory: `reports/playwright/results.json`
-- Multiple test suites: `e2e-results/results.json`, `integration-results/results.json`
+- **Recommended (config file):** `playwright-report/results.json`
+  ```javascript
+  // playwright.config.js
+  reporter: [['json', { outputFile: 'playwright-report/results.json' }]]
+  ```
+- **Legacy (shell redirect):** `test-results.json`
+  ```bash
+  npx playwright test --reporter=json > test-results.json
+  ```
+- **Custom output directory:** `reports/playwright/results.json`
+- **Multiple test suites:** `e2e-results/results.json`, `integration-results/results.json`
+
+💡 **For detailed reporter configuration examples**, see [examples/playwright-reporters.md](../examples/playwright-reporters.md)
 
 #### `max-failures`
 
@@ -273,12 +285,23 @@ Handle non-standard Playwright configurations:
 2. Check the `report-path` parameter matches your Playwright configuration
 3. Ensure the test step completed (use `continue-on-error: true`)
 
-```yaml
-# Playwright config
+**Recommended fix:**
+```javascript
+// playwright.config.js
 export default {
-  reporter: [['json', { outputFile: 'test-results/results.json' }]]
+  reporter: [['json', { outputFile: 'playwright-report/results.json' }]]
 }
 ```
+
+```yaml
+# workflow.yml - uses default path
+uses: decision-crafters/playwright-failure-analyzer@v1
+with:
+  github-token: ${{ secrets.GITHUB_TOKEN }}
+  # report-path not specified - uses default playwright-report/results.json
+```
+
+📖 **See [Playwright Reporter Configurations](../examples/playwright-reporters.md) for complete setup guide**
 
 #### Issue: "Permission denied" or "403 Forbidden"
 

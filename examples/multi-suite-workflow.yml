@@ -29,11 +29,18 @@ jobs:
         run: npx playwright install chromium
 
       - name: Run Chrome tests
-        run: npx playwright test --project=chromium --reporter=json > chrome-results.json
+        id: playwright-tests
+        run: |
+          set +e  # Disable exit on error to capture test exit code
+          npx playwright test --project=chromium --reporter=json > chrome-results.json 2>&1
+          TEST_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+          echo "test-failed=$([ $TEST_EXIT_CODE -ne 0 ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          exit $TEST_EXIT_CODE
         continue-on-error: true
 
       - name: Analyze Chrome failures
-        if: failure()
+        if: steps.playwright-tests.outputs.test-failed == 'true'
         uses: decision-crafters/playwright-failure-analyzer@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -61,11 +68,18 @@ jobs:
         run: npx playwright install firefox
 
       - name: Run Firefox tests
-        run: npx playwright test --project=firefox --reporter=json > firefox-results.json
+        id: playwright-tests
+        run: |
+          set +e  # Disable exit on error to capture test exit code
+          npx playwright test --project=firefox --reporter=json > firefox-results.json 2>&1
+          TEST_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+          echo "test-failed=$([ $TEST_EXIT_CODE -ne 0 ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          exit $TEST_EXIT_CODE
         continue-on-error: true
 
       - name: Analyze Firefox failures
-        if: failure()
+        if: steps.playwright-tests.outputs.test-failed == 'true'
         uses: decision-crafters/playwright-failure-analyzer@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -93,11 +107,18 @@ jobs:
         run: npx playwright install webkit
 
       - name: Run mobile tests
-        run: npx playwright test --project=webkit --reporter=json > mobile-results.json
+        id: playwright-tests
+        run: |
+          set +e  # Disable exit on error to capture test exit code
+          npx playwright test --project=webkit --reporter=json > mobile-results.json 2>&1
+          TEST_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+          echo "test-failed=$([ $TEST_EXIT_CODE -ne 0 ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          exit $TEST_EXIT_CODE
         continue-on-error: true
 
       - name: Analyze mobile failures
-        if: failure()
+        if: steps.playwright-tests.outputs.test-failed == 'true'
         uses: decision-crafters/playwright-failure-analyzer@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}

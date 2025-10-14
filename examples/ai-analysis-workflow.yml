@@ -24,14 +24,20 @@ jobs:
           node-version: '18'
 
       - name: Install and test
+        id: playwright-tests
         run: |
           npm ci
           npx playwright install --with-deps
-          npx playwright test --reporter=json > test-results.json
+          set +e  # Disable exit on error to capture test exit code
+          npx playwright test --reporter=json > test-results.json 2>&1
+          TEST_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+          echo "test-failed=$([ $TEST_EXIT_CODE -ne 0 ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          exit $TEST_EXIT_CODE
         continue-on-error: true
 
       - name: Analyze with OpenRouter + DeepSeek
-        if: failure()
+        if: steps.playwright-tests.outputs.test-failed == 'true'
         uses: decision-crafters/playwright-failure-analyzer@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -57,14 +63,20 @@ jobs:
           node-version: '18'
 
       - name: Install and test
+        id: playwright-tests
         run: |
           npm ci
           npx playwright install --with-deps
-          npx playwright test --reporter=json > test-results.json
+          set +e  # Disable exit on error to capture test exit code
+          npx playwright test --reporter=json > test-results.json 2>&1
+          TEST_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+          echo "test-failed=$([ $TEST_EXIT_CODE -ne 0 ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          exit $TEST_EXIT_CODE
         continue-on-error: true
 
       - name: Analyze with OpenAI
-        if: failure()
+        if: steps.playwright-tests.outputs.test-failed == 'true'
         uses: decision-crafters/playwright-failure-analyzer@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -90,14 +102,20 @@ jobs:
           node-version: '18'
 
       - name: Install and test
+        id: playwright-tests
         run: |
           npm ci
           npx playwright install --with-deps
-          npx playwright test --reporter=json > test-results.json
+          set +e  # Disable exit on error to capture test exit code
+          npx playwright test --reporter=json > test-results.json 2>&1
+          TEST_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+          echo "test-failed=$([ $TEST_EXIT_CODE -ne 0 ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          exit $TEST_EXIT_CODE
         continue-on-error: true
 
       - name: Analyze with Claude
-        if: failure()
+        if: steps.playwright-tests.outputs.test-failed == 'true'
         uses: decision-crafters/playwright-failure-analyzer@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -123,14 +141,20 @@ jobs:
           node-version: '18'
 
       - name: Install and test
+        id: playwright-tests
         run: |
           npm ci
           npx playwright install --with-deps
-          npx playwright test --reporter=json > test-results.json
+          set +e  # Disable exit on error to capture test exit code
+          npx playwright test --reporter=json > test-results.json 2>&1
+          TEST_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+          echo "test-failed=$([ $TEST_EXIT_CODE -ne 0 ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          exit $TEST_EXIT_CODE
         continue-on-error: true
 
       - name: Analyze without AI
-        if: failure()
+        if: steps.playwright-tests.outputs.test-failed == 'true'
         uses: decision-crafters/playwright-failure-analyzer@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
