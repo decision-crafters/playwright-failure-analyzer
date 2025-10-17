@@ -196,7 +196,7 @@ Return ONLY valid JSON:
                 start = json_text.find("{")
                 end = json_text.rfind("}")
                 if start >= 0 and end > start:
-                    json_text = json_text[start : end + 1]
+                    json_text = json_text[start:end + 1]
                     return json.loads(json_text)
 
             return None

@@ -57,7 +57,7 @@ class TestAIAnalyzer(unittest.TestCase):
         """Test AIAnalyzer initialization."""
         analyzer = AIAnalyzer(model="gpt-4.1-mini")
         self.assertEqual(analyzer.model, "gpt-4.1-mini")
-        self.assertEqual(analyzer.max_tokens, 1000)
+        self.assertEqual(analyzer.max_tokens, 2500)  # Updated from 1000 to 2500
 
     def test_create_analysis_prompt(self):
         """Test prompt creation for AI analysis."""
@@ -95,7 +95,8 @@ class TestAIAnalyzer(unittest.TestCase):
         self.assertIsInstance(result, AIAnalysisResult)
         self.assertEqual(result.summary, "Multiple test failures due to element selector issues")
         self.assertEqual(len(result.suggested_actions), 3)
-        self.assertEqual(result.confidence_score, 0.85)
+        # Confidence is adjusted by model multiplier: 0.85 * 0.85 (balanced tier) = 0.7225
+        self.assertAlmostEqual(result.confidence_score, 0.7225, places=3)
         self.assertEqual(len(result.error_patterns), 2)
 
     def test_parse_text_response(self):
@@ -140,7 +141,8 @@ class TestAIAnalyzer(unittest.TestCase):
 
         self.assertIsNotNone(result)
         self.assertEqual(result.summary, "Test failures due to timing issues")
-        self.assertEqual(result.confidence_score, 0.9)
+        # Confidence is adjusted by model multiplier: 0.9 * 0.85 (balanced tier) = 0.765
+        self.assertAlmostEqual(result.confidence_score, 0.765, places=3)
 
         # Verify LiteLLM was called correctly
         mock_completion.assert_called_once()
@@ -207,7 +209,7 @@ class TestAIAnalysisFormatter(unittest.TestCase):
         formatted = AIAnalysisFormatter.format_analysis_section(self.sample_analysis)
 
         # Check that all sections are present
-        self.assertIn("🤖 AI Analysis", formatted)
+        self.assertIn("🤖 AI-Powered Analysis & Recommendations", formatted)
         self.assertIn("Root Cause Analysis", formatted)
         self.assertIn("Suggested Actions", formatted)
         self.assertIn("Error Patterns Identified", formatted)
@@ -271,7 +273,7 @@ class TestAIAnalysisFormatter(unittest.TestCase):
 
         formatted = AIAnalysisFormatter.format_analysis_section(minimal_analysis)
 
-        self.assertIn("🤖 AI Analysis", formatted)
+        self.assertIn("🤖 AI-Powered Analysis & Recommendations", formatted)
         self.assertIn("Basic analysis", formatted)
         self.assertIn("Limited information available", formatted)
         # Should not include empty sections

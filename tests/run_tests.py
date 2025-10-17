@@ -46,7 +46,7 @@ def run_linting():
                 "flake8",
                 str(src_dir),
                 "--max-line-length=100",
-                "--ignore=E501,W503",  # Ignore line length and line break before binary operator
+                "--ignore=E501,W503,E203",  # Ignore line length, line break before binary operator, whitespace before ':'
                 "--exclude=__pycache__",
             ],
             capture_output=True,
