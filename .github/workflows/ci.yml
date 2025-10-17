@@ -33,7 +33,7 @@ jobs:
 
       - name: Run linting
         run: |
-          flake8 src/ --max-line-length=100 --ignore=E501,W503
+          flake8 src/ --max-line-length=100 --ignore=E501,W503,E203
           black --check src/
           isort --check-only src/
 
