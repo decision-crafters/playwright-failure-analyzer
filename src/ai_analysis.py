@@ -32,10 +32,41 @@ class AIAnalysisResult:
     failure_categories: Optional[Dict[str, List[str]]] = None
     quick_wins: Optional[List[str]] = None
     test_quality_feedback: Optional[List[Dict[str, str]]] = None
+    # Auto-fix support fields
+    fixability_score: Optional[float] = None
+    model_tier: Optional[str] = None
+    raw_confidence: Optional[float] = None
+    auto_fix_prompt: Optional[str] = None
 
 
 class AIAnalyzer:
     """AI-powered analyzer for test failures using LiteLLM."""
+
+    # Model confidence multipliers based on model capability tiers
+    MODEL_CONFIDENCE_MULTIPLIERS = {
+        # Premium models (high confidence)
+        "openai/gpt-4o": 1.0,
+        "gpt-4o": 1.0,
+        "anthropic/claude-3.5-sonnet": 1.0,
+        "claude-3.5-sonnet": 1.0,
+        "anthropic/claude-3-opus": 1.0,
+        "claude-3-opus": 1.0,
+        # Balanced models (medium confidence)
+        "openai/gpt-4o-mini": 0.85,
+        "gpt-4o-mini": 0.85,
+        "anthropic/claude-3.5-haiku": 0.85,
+        "claude-3.5-haiku": 0.85,
+        "anthropic/claude-3-haiku": 0.85,
+        "claude-3-haiku": 0.85,
+        # Budget models (lower confidence)
+        "openrouter/deepseek/deepseek-chat": 0.70,
+        "deepseek/deepseek-chat": 0.70,
+        "openrouter/deepseek/deepseek-coder": 0.75,
+        "deepseek/deepseek-coder": 0.75,
+        "openrouter/meta-llama/llama-3.1-70b-instruct": 0.75,
+        # Default for unknown models
+        "default": 0.60,
+    }
 
     def __init__(self, model: str = "gpt-4o-mini", max_tokens: int = 2500):
         """
@@ -49,8 +80,39 @@ class AIAnalyzer:
         self.max_tokens = max_tokens
         self.logger = logging.getLogger(__name__)
 
+        # Determine model tier and confidence multiplier
+        self.model_multiplier = self._get_model_multiplier(model)
+        self.model_tier = self._get_model_tier(model)
+
         # Configure LiteLLM
         self._setup_litellm()
+
+    def _get_model_multiplier(self, model: str) -> float:
+        """Get confidence multiplier for the given model."""
+        # Try exact match first
+        if model in self.MODEL_CONFIDENCE_MULTIPLIERS:
+            return self.MODEL_CONFIDENCE_MULTIPLIERS[model]
+
+        # Try partial match (e.g., "openrouter/deepseek/deepseek-chat" contains "deepseek")
+        model_lower = model.lower()
+        for key, value in self.MODEL_CONFIDENCE_MULTIPLIERS.items():
+            if key.lower() in model_lower or model_lower in key.lower():
+                return value
+
+        # Return default for unknown models
+        return self.MODEL_CONFIDENCE_MULTIPLIERS["default"]
+
+    def _get_model_tier(self, model: str) -> str:
+        """Get the tier classification for the model."""
+        multiplier = self._get_model_multiplier(model)
+        if multiplier >= 0.95:
+            return "premium"
+        elif multiplier >= 0.80:
+            return "balanced"
+        elif multiplier >= 0.65:
+            return "budget"
+        else:
+            return "basic"
 
     def _setup_litellm(self) -> None:
         """Setup LiteLLM configuration."""
@@ -112,6 +174,7 @@ Your response must help developers quickly understand:
 2. HOW LONG it will take (effort)
 3. WHERE to make changes (specific fixes)
 4. WHY it's failing (root cause)
+5. WHETHER it can be auto-fixed (fixability)
 
 Required JSON structure (respond with this exact structure):
 {
@@ -133,7 +196,9 @@ Required JSON structure (respond with this exact structure):
       "fix": "Specific action to take",
       "code_hint": "Suggested code change",
       "estimated_time": "5 min | 30 min | 2 hours",
-      "complexity": "trivial | easy | moderate | complex"
+      "complexity": "trivial | easy | moderate | complex",
+      "fixability_score": 0.85,
+      "error_pattern": "missing_await | wrong_selector | timeout | type_error | etc"
     }
   ],
   "failure_categories": {
@@ -158,19 +223,41 @@ Required JSON structure (respond with this exact structure):
     }
   ],
   "confidence_score": 0.8,
-  "error_patterns": ["timeout", "selector", "network"]
+  "error_patterns": ["timeout", "selector", "network"],
+  "fixability_score": 0.75,
+  "auto_fix_prompt": "Detailed instructions for automated fixing tools"
 }
+
+Fixability Score Guidelines (0.0 - 1.0):
+- 0.9-1.0: Trivial fixes (missing await, simple typos, import errors)
+- 0.7-0.89: Easy fixes (wrong selectors, timeout adjustments, simple logic)
+- 0.5-0.69: Moderate fixes (complex selectors, test setup/teardown, timing issues)
+- 0.3-0.49: Complex fixes (business logic, race conditions, multi-step changes)
+- 0.0-0.29: Not auto-fixable (requires domain knowledge, architectural changes)
+
+Error Pattern Classifications:
+- missing_await: Async function called without await
+- wrong_selector: Element selector doesn't match DOM
+- timeout: Operation exceeded time limit
+- type_error: TypeScript/JavaScript type mismatch
+- import_error: Module import failure
+- deprecated_api: Using deprecated Playwright API
+- network_error: API/network request failed
+- assertion_error: Test expectation failed
+- flaky_timing: Intermittent timing-related failure
 
 Guidelines:
 - PRIORITIZE: Most critical/blocking failures first
 - BE SPECIFIC: Provide file:line references and exact fixes
 - ESTIMATE EFFORT: Help developers plan time
+- ASSESS FIXABILITY: Rate how suitable for automated fixing
+- CLASSIFY PATTERNS: Identify error types for pattern matching
 - GROUP RELATED: Identify failures with common causes
 - QUICK WINS: Highlight fast fixes for immediate progress
 - BE ACTIONABLE: Every suggestion should be immediately actionable
-- CONSIDER CONTEXT: Note if failures are intentional, environmental, or genuine bugs
+- PROVIDE AUTO-FIX GUIDANCE: Include prompts for automated tools
 
-Remember: Developers need to know WHAT to fix, in WHAT ORDER, and HOW LONG it will take.
+Remember: Developers need to know WHAT to fix, in WHAT ORDER, HOW LONG it will take, and IF it can be automated.
 Respond with valid JSON only - no markdown formatting."""
 
     def _create_analysis_prompt(
@@ -253,13 +340,27 @@ Respond with valid JSON only - no markdown formatting."""
                     # Parse JSON
                     data = json.loads(json_text)
 
+                    # Get raw confidence from AI response
+                    raw_confidence = float(data.get("confidence_score", 0.5))
+
+                    # Apply model-based confidence multiplier
+                    adjusted_confidence = min(raw_confidence * self.model_multiplier, 1.0)
+
+                    # Get fixability score
+                    fixability_score = float(data.get("fixability_score", 0.5))
+
+                    # Generate auto-fix prompt if not provided
+                    auto_fix_prompt = data.get("auto_fix_prompt") or self._generate_auto_fix_prompt(
+                        data
+                    )
+
                     return AIAnalysisResult(
                         summary=data.get("summary", "AI analysis completed"),
                         root_cause_analysis=data.get(
                             "root_cause_analysis", "No specific root cause identified"
                         ),
                         suggested_actions=data.get("suggested_actions", []),
-                        confidence_score=float(data.get("confidence_score", 0.5)),
+                        confidence_score=adjusted_confidence,
                         analysis_model=self.model,
                         error_patterns=data.get("error_patterns", []),
                         # Enhanced fields
@@ -269,6 +370,11 @@ Respond with valid JSON only - no markdown formatting."""
                         failure_categories=data.get("failure_categories"),
                         quick_wins=data.get("quick_wins"),
                         test_quality_feedback=data.get("test_quality_feedback"),
+                        # Auto-fix support fields
+                        fixability_score=fixability_score,
+                        model_tier=self.model_tier,
+                        raw_confidence=raw_confidence,
+                        auto_fix_prompt=auto_fix_prompt,
                     )
 
             # Fallback: parse as plain text
@@ -277,6 +383,31 @@ Respond with valid JSON only - no markdown formatting."""
         except (json.JSONDecodeError, ValueError) as e:
             self.logger.warning(f"Failed to parse JSON response: {e}")
             return self._parse_text_response(response_text)
+
+    def _generate_auto_fix_prompt(self, data: Dict[str, Any]) -> str:
+        """Generate auto-fix prompt from analysis data."""
+        prompt_parts = []
+
+        # Add summary
+        if data.get("summary"):
+            prompt_parts.append(f"Summary: {data['summary']}")
+
+        # Add specific fixes with highest fixability
+        specific_fixes = data.get("specific_fixes", [])
+        if specific_fixes:
+            high_fixability = [f for f in specific_fixes if f.get("fixability_score", 0) >= 0.7]
+            if high_fixability:
+                prompt_parts.append("\nAuto-fixable issues:")
+                for fix in high_fixability:
+                    prompt_parts.append(f"- {fix.get('test')}: {fix.get('fix')}")
+                    if fix.get("code_hint"):
+                        prompt_parts.append(f"  Code: {fix['code_hint']}")
+
+        # Add error patterns
+        if data.get("error_patterns"):
+            prompt_parts.append(f"\nError patterns: {', '.join(data['error_patterns'])}")
+
+        return "\n".join(prompt_parts) if prompt_parts else "No auto-fix guidance available"
 
     def _parse_text_response(self, response_text: str) -> AIAnalysisResult:
         """Parse plain text response as fallback."""
@@ -410,15 +541,37 @@ class AIAnalysisFormatter:
             sections.append("")
 
         # Metadata
-        sections.extend(
+        metadata_parts = ["---"]
+
+        # Model information with tier
+        model_info = f"*Analysis generated by {analysis.analysis_model}"
+        if analysis.model_tier:
+            model_info += f" ({analysis.model_tier} tier)"
+        model_info += f" - Confidence: {analysis.confidence_score:.1%}"
+        if analysis.raw_confidence and analysis.raw_confidence != analysis.confidence_score:
+            model_info += f" (raw: {analysis.raw_confidence:.1%})"
+        model_info += "*"
+        metadata_parts.append(model_info)
+
+        # Fixability score
+        if analysis.fixability_score is not None:
+            fixability_emoji = (
+                "🟢"
+                if analysis.fixability_score >= 0.7
+                else "🟡" if analysis.fixability_score >= 0.5 else "🔴"
+            )
+            metadata_parts.append(
+                f"*{fixability_emoji} Auto-fix feasibility: {analysis.fixability_score:.1%}*"
+            )
+
+        metadata_parts.extend(
             [
-                "---",
-                f"*Analysis generated by {analysis.analysis_model} "
-                f"(confidence: {analysis.confidence_score:.1%})*",
                 "",
                 "💬 **Need help?** Comment on this issue with questions about the analysis.",
             ]
         )
+
+        sections.extend(metadata_parts)
 
         return "\n".join(sections)
 

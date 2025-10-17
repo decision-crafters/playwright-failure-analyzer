@@ -65,6 +65,17 @@ except ImportError:
             return ""
 
 
+try:
+    from auto_fix import AutoFixGenerator, GitHubBranchManager, create_fix_suggestions_section
+
+    AUTO_FIX_AVAILABLE = True
+except ImportError:
+    AUTO_FIX_AVAILABLE = False
+
+    def create_fix_suggestions_section(*args, **kwargs):  # type: ignore
+        return ""
+
+
 class GitHubAPIClient:
     """Client for interacting with the GitHub API."""
 
@@ -178,7 +189,14 @@ class IssueFormatter:
     def __init__(self, github_context: Dict[str, str]):
         self.github_context = github_context
 
-    def format_issue_body(self, summary: Dict[str, Any], ai_analysis=None) -> str:
+    def format_issue_body(
+        self,
+        summary: Dict[str, Any],
+        ai_analysis=None,
+        fix_suggestions=None,
+        auto_fix_mode: str = "none",
+        branch_name: Optional[str] = None,
+    ) -> str:
         """Format the complete issue body from failure summary."""
         sections = [
             self._format_header(summary),
@@ -194,6 +212,21 @@ class IssueFormatter:
             if ai_section:
                 # Insert AI analysis after summary stats but before failure details
                 sections.insert(2, ai_section)
+
+            # Add machine-parseable section for auto-fix tools
+            autofix_section = self._format_autofix_metadata(ai_analysis)
+            if autofix_section:
+                sections.append(autofix_section)
+
+        # Add fix suggestions section if available
+        if fix_suggestions and auto_fix_mode != "none":
+            fix_section = create_fix_suggestions_section(
+                fix_suggestions, auto_fix_mode, branch_name
+            )
+            if fix_section:
+                # Insert after AI analysis or after summary stats
+                insert_index = 3 if ai_analysis else 2
+                sections.insert(insert_index, fix_section)
 
         body = "\n\n".join(sections)
         return truncate_text(sanitize_for_github(body))
@@ -304,6 +337,44 @@ class IssueFormatter:
 
 💡 **Tip**: Look for patterns in the failed tests - are they all in the same area of the application?"""
 
+    def _format_autofix_metadata(self, ai_analysis) -> str:
+        """Format machine-parseable metadata for auto-fix tools."""
+        if not ai_analysis:
+            return ""
+
+        # Create machine-readable section
+        sections = [
+            "---",
+            "<!-- AUTO-FIX-METADATA",
+            "This section contains structured data for automated fixing tools.",
+            "Do not manually edit this section.",
+            "",
+            "```json",
+        ]
+
+        metadata = {
+            "version": "1.0",
+            "fixability_score": ai_analysis.fixability_score,
+            "confidence_score": ai_analysis.confidence_score,
+            "model_tier": ai_analysis.model_tier,
+            "error_patterns": ai_analysis.error_patterns,
+            "auto_fix_prompt": ai_analysis.auto_fix_prompt,
+        }
+
+        # Add specific fixes with high fixability
+        if ai_analysis.specific_fixes:
+            high_fixability = [
+                f for f in ai_analysis.specific_fixes if f.get("fixability_score", 0) >= 0.7
+            ]
+            if high_fixability:
+                metadata["auto_fixable_issues"] = high_fixability
+
+        sections.append(json.dumps(metadata, indent=2))
+        sections.append("```")
+        sections.append("-->")
+
+        return "\n".join(sections)
+
 
 class IssueManager:
     """Manages the creation and deduplication of GitHub issues."""
@@ -320,6 +391,9 @@ class IssueManager:
         assignees: List[str],
         deduplicate: bool = True,
         ai_analysis=None,
+        fix_suggestions=None,
+        auto_fix_mode: str = "none",
+        branch_name: Optional[str] = None,
     ) -> Tuple[int, str, bool]:
         """
         Create a new issue or update existing one.
@@ -327,7 +401,12 @@ class IssueManager:
         Returns:
             Tuple of (issue_number, issue_url, was_created)
         """
-        body = self.formatter.format_issue_body(summary, ai_analysis)
+        body = self.formatter.format_issue_body(
+            summary, ai_analysis, fix_suggestions, auto_fix_mode, branch_name
+        )
+
+        # Add auto-fix labels based on AI analysis
+        enhanced_labels = self._enhance_labels_with_autofix(labels, ai_analysis)
 
         # Check for existing issues if deduplication is enabled
         if deduplicate:
@@ -342,8 +421,37 @@ class IssueManager:
 
         # Create new issue
         print(f"Creating new issue: {title}")
-        issue = self.github_client.create_issue(title, body, labels, assignees)
+        issue = self.github_client.create_issue(title, body, enhanced_labels, assignees)
         return issue["number"], issue["html_url"], True
+
+    def _enhance_labels_with_autofix(self, base_labels: List[str], ai_analysis) -> List[str]:
+        """Add auto-fix related labels based on AI analysis."""
+        labels = base_labels.copy() if base_labels else []
+
+        if not ai_analysis:
+            return labels
+
+        # Add fixability labels based on score
+        fixability_score = ai_analysis.fixability_score or 0
+
+        if fixability_score >= 0.75:
+            labels.append("auto-fix-ready")
+            labels.append("high-fixability")
+        elif fixability_score >= 0.50:
+            labels.append("auto-fix-candidate")
+            labels.append("medium-fixability")
+
+        # Add model tier label
+        if ai_analysis.model_tier:
+            labels.append(f"ai-tier-{ai_analysis.model_tier}")
+
+        # Add error pattern labels
+        if ai_analysis.error_patterns:
+            for pattern in ai_analysis.error_patterns[:3]:  # Limit to 3 patterns
+                label = f"pattern-{pattern.replace('_', '-')}"
+                labels.append(label)
+
+        return labels
 
     def _find_existing_issue(self, title: str) -> Optional[Dict[str, Any]]:
         """Find an existing open issue with the same title."""
@@ -372,6 +480,12 @@ def main():
     )
     parser.add_argument(
         "--ai-analysis", default="false", help="Enable AI analysis (future feature)"
+    )
+    parser.add_argument(
+        "--auto-fix-mode",
+        default="none",
+        choices=["none", "issue-only", "branch", "pr-draft"],
+        help="Auto-fix behavior mode",
     )
 
     args = parser.parse_args()
@@ -437,6 +551,54 @@ def main():
         else:
             print("AI analysis requested but LiteLLM not available")
 
+    # Generate fix suggestions if auto-fix mode is enabled
+    fix_suggestions = None
+    branch_name = None
+    auto_fix_mode = args.auto_fix_mode
+
+    if auto_fix_mode != "none" and AUTO_FIX_AVAILABLE and ai_analysis:
+        # Only generate fixes for high-fixability failures
+        fixability_threshold = 0.70
+        if (ai_analysis.fixability_score or 0) >= fixability_threshold:
+            print(f"Generating fix suggestions (mode: {auto_fix_mode})...")
+
+            try:
+                # Get AI model from environment
+                ai_model = os.getenv("AI_MODEL", "gpt-4o-mini")
+                fix_generator = AutoFixGenerator(model=ai_model)
+
+                fix_suggestions = []
+                for failure in summary["failures"][:3]:  # Limit to first 3 failures
+                    fix = fix_generator.generate_fix(failure)
+                    if fix:
+                        fix_suggestions.append(fix)
+
+                if fix_suggestions:
+                    print(f"Generated {len(fix_suggestions)} fix suggestions")
+
+                    # Create branch if mode is 'branch' or 'pr-draft'
+                    if auto_fix_mode in ["branch", "pr-draft"] and fix_suggestions:
+                        print("Creating fix branch...")
+                        branch_manager = GitHubBranchManager(github_token, repository)
+
+                        # We'll create the branch after we have the issue number
+                        # Store fix suggestions for now
+                        pass
+
+                else:
+                    print("No fix suggestions could be generated")
+                    auto_fix_mode = "none"  # Fall back to regular mode
+
+            except Exception as e:
+                print(f"Warning: Auto-fix generation failed: {e}")
+                auto_fix_mode = "none"  # Fall back to regular mode
+        else:
+            print(f"Fixability score too low ({ai_analysis.fixability_score:.1%}) for auto-fix")
+            auto_fix_mode = "none"
+    elif auto_fix_mode != "none" and not AUTO_FIX_AVAILABLE:
+        print("Auto-fix requested but auto_fix module not available")
+        auto_fix_mode = "none"
+
     # Initialize components
     github_client = GitHubAPIClient(github_token, repository, error_handler_instance)
     formatter = IssueFormatter(github_context)
@@ -444,8 +606,41 @@ def main():
 
     # Create or update issue
     issue_number, issue_url, was_created = issue_manager.create_or_update_issue(
-        summary, args.issue_title, labels, assignees, deduplicate, ai_analysis
+        summary,
+        args.issue_title,
+        labels,
+        assignees,
+        deduplicate,
+        ai_analysis,
+        fix_suggestions,
+        auto_fix_mode,
+        branch_name,
     )
+
+    # Create branch with fixes if mode is 'branch' or 'pr-draft'
+    if auto_fix_mode in ["branch", "pr-draft"] and fix_suggestions and was_created:
+        print(f"Creating auto-fix branch for issue #{issue_number}...")
+        try:
+            branch_manager = GitHubBranchManager(github_token, repository)
+            pattern = ai_analysis.error_patterns[0] if ai_analysis.error_patterns else "unknown"
+            branch_name = branch_manager.create_fix_branch(issue_number, pattern, fix_suggestions)
+
+            if branch_name:
+                print(f"Created branch: {branch_name}")
+
+                # Update issue with branch information
+                github_client.update_issue(
+                    issue_number,
+                    body=formatter.format_issue_body(
+                        summary, ai_analysis, fix_suggestions, auto_fix_mode, branch_name
+                    ),
+                )
+
+                # TODO: Create draft PR if mode is 'pr-draft'
+                # This would require additional GitHub API calls
+
+        except Exception as e:
+            print(f"Warning: Failed to create fix branch: {e}")
 
     # Set outputs
     set_github_output("issue-number", str(issue_number))

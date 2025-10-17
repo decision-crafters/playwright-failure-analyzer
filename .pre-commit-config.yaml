@@ -71,7 +71,7 @@ repos:
     hooks:
       - id: flake8
         name: 🔍 Lint with Flake8
-        args: ['--max-line-length=100', '--ignore=E501,W503', '--exclude=__pycache__']
+        args: ['--max-line-length=100', '--ignore=E501,W503,E203', '--exclude=__pycache__']
 
   # Type checking with mypy
   - repo: https://github.com/pre-commit/mirrors-mypy

@@ -246,6 +246,16 @@ def main():
     parser.add_argument("--report-path", required=True, help="Path to the Playwright JSON report")
     parser.add_argument("--max-failures", help="Maximum number of failures to extract")
     parser.add_argument("--output-file", required=True, help="Output file for failure summary JSON")
+    parser.add_argument(
+        "--export-structured-json",
+        help="Export structured JSON optimized for auto-fix tools",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--structured-json-path",
+        help="Path for structured JSON export (for auto-fix integration)",
+        default="playwright-failures-structured.json",
+    )
 
     args = parser.parse_args()
 
@@ -278,10 +288,22 @@ def main():
             suggestions=["Check file permissions and disk space"],
         )
 
+    # Export structured JSON if requested (for auto-fix tools)
+    if args.export_structured_json:
+        try:
+            structured_data = _create_structured_export(summary)
+            with open(args.structured_json_path, "w", encoding="utf-8") as f:
+                json.dump(structured_data, f, indent=2, ensure_ascii=False)
+            print(f"Structured JSON exported to: {args.structured_json_path}")
+        except Exception as e:
+            print(f"Warning: Failed to export structured JSON: {e}", file=sys.stderr)
+
     # Set GitHub Actions outputs (using new format)
     from utils import set_github_output
 
     set_github_output("failures-count", str(summary.failed_tests))
+    if args.export_structured_json:
+        set_github_output("structured-json-path", args.structured_json_path)
 
     # Print summary and exit successfully
     # Note: Finding failures is expected behavior, not an error condition
@@ -290,6 +312,124 @@ def main():
     else:
         print("No test failures found")
     sys.exit(0)  # Exit successfully after parsing
+
+
+def _create_structured_export(summary: FailureSummary) -> Dict[str, Any]:
+    """
+    Create structured JSON export optimized for auto-fix tools.
+
+    This format is designed to be consumed by Dagger modules and other
+    automated fixing tools. It includes:
+    - Clean, machine-parseable failure data
+    - File:line references for precise targeting
+    - Error pattern classification
+    - Metadata for context
+    """
+    failures_data = []
+
+    for failure in summary.failures:
+        failure_dict = {
+            "test_name": failure.test_name,
+            "file_path": failure.file_path,
+            "line_number": failure.line_number,
+            "error_message": failure.error_message,
+            "error_type": _classify_error_type(failure.error_message),
+            "stack_trace": failure.stack_trace,
+            "duration_ms": failure.duration,
+            "retry_count": failure.retry_count,
+            "project_name": failure.project_name,
+            "browser": failure.browser,
+            # Add fields for auto-fix integration
+            "fixability_hint": _get_fixability_hint(failure.error_message),
+            "suggested_pattern": _detect_error_pattern(failure.error_message),
+        }
+        failures_data.append(failure_dict)
+
+    return {
+        "version": "1.0",
+        "format": "playwright-failure-analyzer-structured",
+        "generated_at": os.getenv("GITHUB_RUN_ID", "local"),
+        "summary": {
+            "total_tests": summary.total_tests,
+            "passed_tests": summary.passed_tests,
+            "failed_tests": summary.failed_tests,
+            "skipped_tests": summary.skipped_tests,
+            "duration_ms": summary.duration,
+        },
+        "failures": failures_data,
+        "metadata": summary.metadata,
+        "auto_fix_context": {
+            "repository": os.getenv("GITHUB_REPOSITORY", "unknown"),
+            "sha": os.getenv("GITHUB_SHA", "unknown"),
+            "branch": os.getenv("GITHUB_REF_NAME", "unknown"),
+            "workflow": os.getenv("GITHUB_WORKFLOW", "unknown"),
+        },
+    }
+
+
+def _classify_error_type(error_message: str) -> str:
+    """Classify the error type based on error message patterns."""
+    error_lower = error_message.lower()
+
+    if "timeout" in error_lower or "exceeded" in error_lower:
+        return "timeout"
+    elif "selector" in error_lower or "element" in error_lower:
+        return "selector"
+    elif "await" in error_lower or "promise" in error_lower:
+        return "async"
+    elif "type" in error_lower and ("error" in error_lower or "mismatch" in error_lower):
+        return "type_error"
+    elif "import" in error_lower or "module" in error_lower:
+        return "import_error"
+    elif "network" in error_lower or "fetch" in error_lower or "request" in error_lower:
+        return "network"
+    elif "assertion" in error_lower or "expect" in error_lower:
+        return "assertion"
+    else:
+        return "unknown"
+
+
+def _get_fixability_hint(error_message: str) -> str:
+    """Provide a fixability hint based on error patterns."""
+    error_type = _classify_error_type(error_message)
+
+    fixability_map = {
+        "timeout": "medium - consider increasing timeout or improving wait conditions",
+        "selector": "high - check element selector matches DOM",
+        "async": "high - likely missing await on async function",
+        "type_error": "high - fix type annotation or value",
+        "import_error": "high - fix import path or install dependency",
+        "network": "low - may require infrastructure changes",
+        "assertion": "low - may require business logic review",
+        "unknown": "low - needs manual investigation",
+    }
+
+    return fixability_map.get(error_type, "unknown")
+
+
+def _detect_error_pattern(error_message: str) -> str:
+    """Detect specific error patterns for auto-fix pattern matching."""
+    error_lower = error_message.lower()
+
+    # Specific patterns that are commonly auto-fixable
+    if "waiting for selector" in error_lower and "timeout" in error_lower:
+        return "selector_timeout"
+    elif "missing await" in error_lower or "did you forget to await" in error_lower:
+        return "missing_await"
+    elif "element is not attached" in error_lower:
+        return "element_detached"
+    elif "navigation timeout" in error_lower:
+        return "navigation_timeout"
+    elif "locator resolved to" in error_lower and "multiple" in error_lower:
+        return "multiple_elements"
+    elif "cannot find module" in error_lower:
+        return "module_not_found"
+    elif "type 'number' is not assignable" in error_lower:
+        return "type_mismatch_number"
+    elif "type 'string' is not assignable" in error_lower:
+        return "type_mismatch_string"
+    else:
+        return "unknown_pattern"
 
 
 if __name__ == "__main__":

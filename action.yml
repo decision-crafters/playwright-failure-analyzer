@@ -37,6 +37,18 @@ inputs:
     description: 'Enable AI-powered failure analysis using LiteLLM'
     required: false
     default: 'true'
+  export-structured-json:
+    description: 'Export structured JSON optimized for auto-fix tools (e.g., Dagger modules)'
+    required: false
+    default: 'false'
+  structured-json-path:
+    description: 'Path for structured JSON export (for auto-fix integration)'
+    required: false
+    default: 'playwright-failures-structured.json'
+  auto-fix-mode:
+    description: 'Auto-fix behavior: none (analysis only), issue-only (add fix to issue), branch (create fix branch), pr-draft (create draft PR)'
+    required: false
+    default: 'none'
 
 outputs:
   issue-number:
@@ -48,6 +60,9 @@ outputs:
   failures-count:
     description: 'Number of failures detected in the report'
     value: ${{ steps.parse-report.outputs.failures-count }}
+  structured-json-path:
+    description: 'Path to the structured JSON export (if enabled)'
+    value: ${{ steps.parse-report.outputs.structured-json-path }}
 
 runs:
   using: 'composite'
@@ -69,7 +84,9 @@ runs:
         python ${{ github.action_path }}/src/parse_report.py \
           --report-path "${{ inputs.report-path }}" \
           --max-failures "${{ inputs.max-failures }}" \
-          --output-file "/tmp/failure_summary.json"
+          --output-file "/tmp/failure_summary.json" \
+          ${{ inputs.export-structured-json == 'true' && '--export-structured-json' || '' }} \
+          ${{ inputs.export-structured-json == 'true' && format('--structured-json-path "{0}"', inputs.structured-json-path) || '' }}
 
     - name: Create GitHub issue
       id: create-issue
@@ -84,4 +101,5 @@ runs:
           --issue-labels "${{ inputs.issue-labels }}" \
           --assignees "${{ inputs.assignees }}" \
           --deduplicate "${{ inputs.deduplicate }}" \
-          --ai-analysis "${{ inputs.ai-analysis }}"
+          --ai-analysis "${{ inputs.ai-analysis }}" \
+          --auto-fix-mode "${{ inputs.auto-fix-mode }}"
