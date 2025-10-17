@@ -147,7 +147,7 @@ class TestAIAnalyzer(unittest.TestCase):
         # Verify LiteLLM was called correctly
         mock_completion.assert_called_once()
         call_args = mock_completion.call_args
-        self.assertEqual(call_args.kwargs["model"], "gpt-4.1-mini")
+        self.assertEqual(call_args.kwargs["model"], "gpt-4o-mini")  # Default model
         self.assertEqual(len(call_args.kwargs["messages"]), 2)
 
     @patch("ai_analysis.litellm.completion")
@@ -211,7 +211,7 @@ class TestAIAnalysisFormatter(unittest.TestCase):
         # Check that all sections are present
         self.assertIn("🤖 AI-Powered Analysis & Recommendations", formatted)
         self.assertIn("Root Cause Analysis", formatted)
-        self.assertIn("Suggested Actions", formatted)
+        self.assertIn("Action Items", formatted)  # Changed from "Suggested Actions"
         self.assertIn("Error Patterns Identified", formatted)
 
         # Check specific content
@@ -277,7 +277,7 @@ class TestAIAnalysisFormatter(unittest.TestCase):
         self.assertIn("Basic analysis", formatted)
         self.assertIn("Limited information available", formatted)
         # Should not include empty sections
-        self.assertNotIn("Suggested Actions", formatted)
+        self.assertNotIn("Action Items", formatted)  # Changed from "Suggested Actions"
         self.assertNotIn("Error Patterns Identified", formatted)
 
 
