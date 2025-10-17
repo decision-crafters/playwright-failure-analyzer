@@ -335,7 +335,7 @@ Respond with valid JSON only - no markdown formatting."""
                 start = json_text.find("{")
                 end = json_text.rfind("}")
                 if start >= 0 and end > start:
-                    json_text = json_text[start:end + 1]
+                    json_text = json_text[start : end + 1]
 
                     # Parse JSON
                     data = json.loads(json_text)
