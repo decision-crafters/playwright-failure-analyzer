@@ -4,6 +4,7 @@
 [![CI Status](https://github.com/decision-crafters/playwright-failure-analyzer/workflows/CI/badge.svg)](https://github.com/decision-crafters/playwright-failure-analyzer/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/decision-crafters/playwright-failure-analyzer)
 
 > **Transform Playwright test failures into actionable GitHub issues with AI-powered insights**
 
