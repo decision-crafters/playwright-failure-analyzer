@@ -12,7 +12,7 @@ repos:
 
   # Detect hardcoded secrets, passwords, and API keys
   - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.4.0
+    rev: v1.5.0
     hooks:
       - id: detect-secrets
         name: 🔐 Detect secrets
@@ -21,7 +21,7 @@ repos:
 
   # Comprehensive secret scanning with Gitleaks
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.18.2
+    rev: v8.30.0
     hooks:
       - id: gitleaks
         name: 🕵️ Gitleaks secret scanner
@@ -29,7 +29,7 @@ repos:
 
   # GitHub Actions workflow validation
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.28.0
+    rev: 0.37.0
     hooks:
       - id: check-github-workflows
         name: ✅ Validate GitHub Actions workflows
@@ -37,7 +37,7 @@ repos:
 
   # Python security linting with Bandit
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.7
+    rev: 1.9.4
     hooks:
       - id: bandit
         name: 🛡️ Bandit security scan
@@ -50,7 +50,7 @@ repos:
 
   # Code formatting with Black
   - repo: https://github.com/psf/black
-    rev: 24.2.0
+    rev: 26.1.0
     hooks:
       - id: black
         name: 🎨 Format code with Black
@@ -59,7 +59,7 @@ repos:
 
   # Import sorting with isort
   - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
+    rev: 8.0.1
     hooks:
       - id: isort
         name: 📦 Sort imports with isort
@@ -67,7 +67,7 @@ repos:
 
   # Python linting with Flake8
   - repo: https://github.com/PyCQA/flake8
-    rev: 7.0.0
+    rev: 7.3.0
     hooks:
       - id: flake8
         name: 🔍 Lint with Flake8
@@ -75,7 +75,7 @@ repos:
 
   # Type checking with mypy
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
+    rev: v1.19.1
     hooks:
       - id: mypy
         name: 🔎 Type check with mypy
@@ -87,7 +87,7 @@ repos:
   # ============================================================================
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v6.0.0
     hooks:
       # File format checks
       - id: check-yaml
@@ -152,7 +152,7 @@ repos:
   # ============================================================================
 
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.39.0
+    rev: v0.47.0
     hooks:
       - id: markdownlint
         name: 📝 Lint Markdown files
@@ -163,7 +163,7 @@ repos:
   # ============================================================================
 
   - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v3.1.0
+    rev: v4.4.0
     hooks:
       - id: conventional-pre-commit
         name: 💬 Validate commit message format
